@@ -2104,12 +2104,13 @@ wheels = [
 ]
 
 [[package]]
-name = "solar-physics-project"
+name = "solar-thermal-cv"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "jupyter" },
     { name = "matplotlib" },
+    { name = "pandas" },
     { name = "pillow" },
     { name = "pytest" },
     { name = "pyyaml" },
@@ -2127,6 +2128,7 @@ dependencies = [
 requires-dist = [
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "matplotlib", specifier = ">=3.10.9" },
+    { name = "pandas", specifier = ">=3.0.3" },
     { name = "pillow", specifier = ">=12.2.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
