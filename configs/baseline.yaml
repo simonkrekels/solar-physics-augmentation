@@ -1,0 +1,11 @@
+model: efficientnet_b0
+pretrained: true
+num_epochs: 30
+batch_size: 32
+learning_rate: 3.0e-4
+weight_decay: 1.0e-4
+warmup_epochs: 5
+seed: 42
+wandb:
+  project: solar-thermal-cv
+  run_name: baseline
