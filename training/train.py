@@ -20,6 +20,7 @@ from training.dataset import (
 )
 from training.evaluate import classification_report_dict, run_eval
 from training.model import build_model
+from augmentation.heat_equation import SyntheticAugmenter
 
 
 def set_seed(seed: int) -> None:
@@ -58,6 +59,18 @@ def train(config_path: str) -> None:
         splits = load_splits()
 
     train_df, val_df, test_df = splits["train"], splits["val"], splits["test"]
+
+    aug_cfg = cfg.get("augmentation", {})
+    if aug_cfg.get("physics_synthetic", False):
+        print("Generating physics-informed synthetic samples …")
+        augmenter = SyntheticAugmenter(train_df, seed=cfg["seed"])
+        train_df = augmenter.augment_split(
+            train_df,
+            target_min=aug_cfg.get("target_min_samples", 500),
+            output_dir=PROCESSED_DIR / "synthetic",
+        )
+        print(f"  Extended train set: {len(train_df)} images")
+
     classes = sorted(train_df["label"].unique().tolist())
     n_classes = len(classes)
     print(f"{n_classes} classes")
