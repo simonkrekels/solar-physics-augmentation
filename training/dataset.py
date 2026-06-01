@@ -16,6 +16,12 @@ IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD  = [0.229, 0.224, 0.225]
 IMG_SIZE = 224
 
+CLASSES = [
+    "Cell", "Cell-Multi", "Cracking", "Diode", "Diode-Multi",
+    "Hot-Spot", "Hot-Spot-Multi", "No-Anomaly", "Offline-Module",
+    "Shadowing", "Soiling", "Vegetation",
+]
+
 
 def make_splits(seed: int = 42) -> dict[str, pd.DataFrame]:
     """Build stratified 70/15/15 splits and write CSVs to data/processed/."""
