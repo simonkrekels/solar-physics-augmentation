@@ -89,7 +89,9 @@ def train(config_path: str) -> None:
         batch_size=cfg["batch_size"], shuffle=False, num_workers=4, pin_memory=pin_memory,
     )
 
-    model = build_model(n_classes, pretrained=cfg["pretrained"]).to(device)
+    model = build_model(
+        n_classes, model_name=cfg.get("model", "efficientnet_b0"), pretrained=cfg["pretrained"]
+    ).to(device)
     criterion = nn.CrossEntropyLoss(weight=compute_class_weights(train_df, classes).to(device))
     optimizer = AdamW(model.parameters(), lr=cfg["learning_rate"], weight_decay=cfg["weight_decay"])
 
