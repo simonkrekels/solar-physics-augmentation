@@ -67,14 +67,52 @@ CSVs are saved as W&B artifacts for full reproducibility.
 
 | Model | Test accuracy | Macro F1 |
 |---|---|---|
-| Baseline | 69.0 % | 0.562 |
-| Physics-augmented | 78.8 % | 0.647 |
+| Baseline (30-epoch) | 69.0 % | 0.562 |
+| Physics-augmented (30-epoch) | 78.8 % | 0.647 |
 
 The augmenter generated **1 388 synthetic images** across four under-represented
 classes (`Diode-Multi`, `Hot-Spot`, `Hot-Spot-Multi`, `Soiling`). The rarest
 classes gained the most. `Soiling` improved least (+0.066 F1) — its real
 signature is spatially diffuse and irregular, which the blob geometry only
 approximates.
+
+### Reading these numbers honestly
+
+A +9.8-point headline is easy to over-claim, so the project includes a
+follow-up analysis (`EXPERIMENTS.md`) that decomposes where the gain actually
+comes from. Two findings temper the headline:
+
+- **Most of the gap is the training schedule, not the augmentation.** The
+  30-epoch baseline is *undertrained*: its slow cosine schedule combined with
+  early stopping halts it at epoch 12, before the learning-rate anneal sharpens
+  the model. A clean model on a faster (15-epoch) schedule reaches **~78 %** with
+  no synthetic data at all — closing roughly +9 of the +9.8 points on its own.
+- **Augmentation's isolated effect is real but smaller, and verified.** On a
+  matched 15-epoch schedule, physics augmentation adds **+1.9 ± 0.6 points** test
+  accuracy (3 seeds, paired; clean 78.2 % → augmented 80.0 %, best run 80.8 %).
+  It helps on every seed. The macro-F1 gain (+0.010 ± 0.011) is within seed
+  noise, so the robust claim is on accuracy. The best single configuration found
+  is augmentation on the 15-epoch schedule.
+
+The takeaway: physics-grounded augmentation genuinely helps under-represented
+classes, but a fair attribution requires a well-tuned baseline — and stating the
+effect size with seed variance rather than a single lucky run.
+
+### Backbone choice
+
+EfficientNet-B0 isn't assumed — it's the measured winner of a sweep
+(`training/sweep_backbones.py`) over four `timm` backbones on identical data:
+
+| Backbone | Params | Test acc | Macro F1 |
+|---|---|---|---|
+| **EfficientNet-B0** | 4.0 M | **78.4 %** | **0.658** |
+| MobileNetV3-Large | 4.2 M | 76.0 % | 0.646 |
+| ConvNeXt-Tiny | 27.8 M | 74.5 % | 0.635 |
+| ResNet-50 | 23.5 M | 69.4 % | 0.577 |
+
+It wins on macro F1 *and* is the smallest model — the larger backbones overfit
+this small, imbalanced dataset. The backbone is now selectable via the config's
+`model:` field, so swapping it requires no code change.
 
 ---
 
@@ -94,12 +132,16 @@ approximates.
 ├── augmentation/heat_equation.py   # PDE solver, source geometries, SyntheticAugmenter
 ├── training/
 │   ├── dataset.py                  # stratified splits, transforms, DataLoader
-│   ├── model.py                    # EfficientNet-B0 via timm
+│   ├── model.py                    # config-selectable backbone via timm
 │   ├── train.py                    # training loop with W&B logging
-│   └── evaluate.py                 # metrics, classification report
+│   ├── evaluate.py                 # metrics, classification report
+│   ├── sweep_backbones.py          # backbone comparison sweep
+│   └── verify_seeds.py             # multi-seed clean vs augmented verification
 ├── configs/
 │   ├── baseline.yaml
-│   └── augmented.yaml
+│   ├── augmented.yaml
+│   └── augmented_15ep.yaml         # best config — tuned 15-epoch schedule
+├── EXPERIMENTS.md                  # backbone sweep + training-regime reconciliation
 ├── notebooks/
 │   ├── 01_eda.ipynb
 │   ├── 02_error_analysis.ipynb
@@ -121,8 +163,12 @@ uv run python training/dataset.py
 # Train baseline
 uv run python -m training.train --config configs/baseline.yaml
 
-# Train physics-augmented
-uv run python -m training.train --config configs/augmented.yaml
+# Train physics-augmented (best config: tuned 15-epoch schedule)
+uv run python -m training.train --config configs/augmented_15ep.yaml
+
+# Compare backbones / verify the augmentation effect across seeds
+uv run python -m training.sweep_backbones
+uv run python -m training.verify_seeds --seeds 42 1 2
 ```
 
 ---
