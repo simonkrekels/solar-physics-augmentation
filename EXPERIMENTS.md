@@ -79,13 +79,35 @@ Full picture (`efficientnet_b0`, seed 42, all on the same clean val/test):
 | **`augmented_15ep.yaml`** | **15 ep** | **✓** | **0.808** |
 
 **Verdict: augmentation adds genuine value, but smaller than headlined.**
-augmented @ 15 ep (0.808) beats clean @ 15 ep (0.784) by **+2.4 pts** — so
-physics augmentation helps *even on a well-tuned schedule*. But the headline
-"+9.8 over the 30-epoch baseline" mostly reflects the schedule: fixing the
-training budget alone closes ~+9.4 of that gap, and augmentation contributes the
-remaining ~+2 on top.
+augmented @ 15 ep (0.808) beats clean @ 15 ep (0.784) — so physics augmentation
+helps *even on a well-tuned schedule*. But the headline "+9.8 over the 30-epoch
+baseline" mostly reflects the schedule: fixing the training budget alone closes
+~+9.4 of that gap, and augmentation contributes the rest on top.
 
-Bonus: `augmented_15ep` (0.808) is the **best configuration found** — it beats
-the project's previous best (`augmented.yaml` @ 30 ep, 0.788), because the
-augmented model also benefits from the faster anneal. Worth promoting to the
-default augmented config.
+Bonus: `augmented_15ep` (0.808) is the **best single run found** — it beats the
+project's previous best (`augmented.yaml` @ 30 ep, 0.788), because the augmented
+model also benefits from the faster anneal. Worth promoting to the default
+augmented config.
+
+### 3-seed verification
+
+The single-seed +2.4 pt delta above is seed 42 — the most favourable seed. Run
+`training/verify_seeds.py` (clean vs augmented @ 15 ep, paired on the same fixed
+test set, seeds 42/1/2; results in `verify_seeds.csv`):
+
+| Seed | Clean acc | Augmented acc | Δ acc |
+|---|---|---|---|
+| 42 | 0.7837 | 0.8077 | +0.0240 |
+| 1 | 0.7820 | 0.8010 | +0.0190 |
+| 2 | 0.7800 | 0.7927 | +0.0127 |
+| **mean ± std** | **0.7819 ± 0.0019** | **0.8005 ± 0.0075** | **+0.0186 ± 0.0057** |
+
+**The effect holds.** Augmentation beats clean on *every* seed, and the mean
+test-acc gain (+1.86 pts) exceeds the run-to-run std (0.57 pts). The verified
+gain (+1.86) is a touch below the seed-42 +2.4, as expected.
+
+**Caveat — metric matters.** On **macro F1** the effect is positive on every
+seed but within noise: +0.0104 ± 0.0105 (per-seed +0.0073 / +0.0018 / +0.0221).
+So the robust, multi-seed claim is on **test accuracy**, not macro F1. The clean
+baseline is remarkably stable (acc std 0.0019); augmentation adds both a higher
+mean and more variance.

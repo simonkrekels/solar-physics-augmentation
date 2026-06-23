@@ -1,0 +1,7 @@
+seed,condition,test_acc,macro_f1,train_min
+42,clean,0.7837,0.6578,58.2
+42,augmented,0.8077,0.6799,61.7
+1,clean,0.782,0.6561,57.9
+1,augmented,0.801,0.6634,61.6
+2,clean,0.78,0.6586,58.3
+2,augmented,0.7927,0.6604,63.3
