@@ -69,8 +69,23 @@ value *on top of* a well-tuned schedule? — is tested below.
 `configs/augmented_15ep.yaml` — `augmented.yaml` at 15 epochs, compared to the
 sweep's clean 15-epoch `efficientnet_b0` (78.4%).
 
-<!-- RESULT-PENDING: filled in once the run completes -->
+Full picture (`efficientnet_b0`, seed 42, all on the same clean val/test):
 
-- augmented @ 15 ep **>** 78.4% → augmentation adds value beyond the schedule fix.
-- augmented @ 15 ep **≈** 78%  → augmentation was largely substituting for a
-  too-short training budget.
+| Run | Schedule | Aug | Test acc |
+|---|---|---|---|
+| `baseline.yaml` | 30 ep | — | 0.690 |
+| `augmented.yaml` | 30 ep | ✓ | 0.788 |
+| sweep clean | 15 ep | — | 0.784 |
+| **`augmented_15ep.yaml`** | **15 ep** | **✓** | **0.808** |
+
+**Verdict: augmentation adds genuine value, but smaller than headlined.**
+augmented @ 15 ep (0.808) beats clean @ 15 ep (0.784) by **+2.4 pts** — so
+physics augmentation helps *even on a well-tuned schedule*. But the headline
+"+9.8 over the 30-epoch baseline" mostly reflects the schedule: fixing the
+training budget alone closes ~+9.4 of that gap, and augmentation contributes the
+remaining ~+2 on top.
+
+Bonus: `augmented_15ep` (0.808) is the **best configuration found** — it beats
+the project's previous best (`augmented.yaml` @ 30 ep, 0.788), because the
+augmented model also benefits from the faster anneal. Worth promoting to the
+default augmented config.
