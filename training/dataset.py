@@ -78,10 +78,16 @@ def get_transforms(split: str) -> transforms.Compose:
 
 
 class SolarModuleDataset(Dataset):
-    def __init__(self, df: pd.DataFrame, classes: list[str], split: str = "train"):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        classes: list[str],
+        split: str = "train",
+        transform: transforms.Compose | None = None,
+    ):
         self.df = df.reset_index(drop=True)
         self.class_to_idx = {c: i for i, c in enumerate(classes)}
-        self.transform = get_transforms(split)
+        self.transform = transform if transform is not None else get_transforms(split)
 
     def __len__(self) -> int:
         return len(self.df)

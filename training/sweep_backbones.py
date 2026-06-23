@@ -65,8 +65,14 @@ def train_one(
     warmup_epochs: int,
     patience: int,
     seed: int,
+    train_transform=None,
+    return_preds: bool = False,
 ) -> dict:
-    """Fine-tune one backbone and return its test metrics."""
+    """Fine-tune one backbone and return its test metrics.
+
+    ``train_transform`` overrides the train-split augmentation (val/test stay
+    clean). ``return_preds`` adds raw test predictions/labels to the result.
+    """
     set_seed(seed)  # identical init/order for every model
 
     # Match the transform resolution to what the pretrained weights expect.
@@ -74,7 +80,7 @@ def train_one(
 
     pin_memory = device.type == "cuda"
     train_loader = DataLoader(
-        SolarModuleDataset(train_df, classes, split="train"),
+        SolarModuleDataset(train_df, classes, split="train", transform=train_transform),
         batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=pin_memory,
     )
     val_loader = DataLoader(
@@ -132,14 +138,19 @@ def train_one(
     _, test_acc, preds, labels = run_eval(model, test_loader, device)
     report = classification_report_dict(preds, labels, classes)
 
-    return {
+    result = {
         "model": model_name,
         "params_M": round(n_params / 1e6, 2),
         "input_size": dataset.IMG_SIZE,
         "test_acc": round(test_acc, 4),
         "macro_f1": round(report["macro avg"]["f1-score"], 4),
+        "macro_recall": round(report["macro avg"]["recall"], 4),
         "train_min": round((time.time() - t0) / 60, 1),
     }
+    if return_preds:
+        result["preds"] = preds
+        result["labels"] = labels
+    return result
 
 
 def main() -> None:
