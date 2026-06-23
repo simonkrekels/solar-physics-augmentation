@@ -12,3 +12,5 @@ checkpoints/
 *.egg-info/
 .ipynb_checkpoints/
 project_plan_thermal_solar.md
+.DS_Store
+*.log

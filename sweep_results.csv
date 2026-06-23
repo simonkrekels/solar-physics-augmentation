@@ -1,0 +1,5 @@
+model,params_M,input_size,test_acc,macro_f1,train_min
+efficientnet_b0,4.02,224,0.7837,0.6578,59.0
+mobilenetv3_large_100,4.22,224,0.7597,0.6464,38.8
+convnext_tiny,27.83,224,0.745,0.6351,132.5
+resnet50,23.53,224,0.6943,0.5773,92.5

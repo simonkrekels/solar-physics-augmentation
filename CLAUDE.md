@@ -82,6 +82,8 @@ Synthetic images are saved to `data/processed/synthetic/<class_name>/syn_NNNNN.j
 
 Augmenter generated 1,388 synthetic images (4 classes below 500: `Diode-Multi`, `Hot-Spot`, `Hot-Spot-Multi`, `Soiling`). Rarest classes gained most. `Soiling` improved least (+0.066 F1) — blob geometry is a weak model for real soiling.
 
+Both numbers reproduce exactly when re-running the configs as-written. **Caveat:** the 30-epoch baseline is undertrained — its slow cosine schedule plus patience-5 early stopping cuts it off at epoch 12, and a clean run on a faster (15-epoch) schedule reaches ~78% with no augmentation. See `EXPERIMENTS.md` for the backbone sweep (`training/sweep_backbones.py`, EfficientNet-B0 wins) and the full training-regime reconciliation.
+
 ### Experiment tracking
 Both runs log to W&B project `solar-thermal-cv`. Model weights and split CSVs logged as artifacts.
 
