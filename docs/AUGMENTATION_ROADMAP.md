@@ -61,8 +61,42 @@ synthetic faults don't look like real faults, so their features don't transfer.
 → Realism work (Thrust A, especially #1 time-dependent and #3 structure-aware) is
 *required*, and cosmetic fixes (blending/compression) won't be enough.
 
-**D2 — rebalance vs class-weighting (running).** `verify_seeds.py` with the
-`*_nw` conditions (class weighting off). Results pending.
+**D2 — rebalance vs class-weighting: H2 confirmed.** Three `*_nw` conditions
+(class weighting OFF), 3 seeds, appended for a unified 7-condition analysis.
+
+| Condition | Accuracy | Macro recall | Rare-class recall |
+|---|---|---|---|
+| clean (weights on) | 0.782 | 0.699 | **0.612** |
+| oversample | 0.807 | 0.697 | 0.574 |
+| physics | 0.800 | 0.693 | 0.569 |
+| clean_nw | 0.839 | 0.684 | 0.560 |
+| oversample_nw | 0.826 | 0.680 | 0.582 |
+| physics_nw | 0.837 | 0.686 | 0.568 |
+
+Findings:
+1. **Class weighting is the single most effective lever for rare classes.**
+   `clean` with weights on (0.612 rare recall) beats *every* other condition,
+   weighted or not. Turning weights off drops rare recall (clean→clean_nw
+   −0.052, CI excludes 0) — exactly what the weighting is for.
+2. **It trades accuracy for rare recall.** Weights off lifts accuracy 0.78→0.84
+   and macro-F1 0.66→0.70 (No-Anomaly recall 0.85→0.97), at the cost of rare
+   recall. A clean precision/recall knob.
+3. **Data rebalancing is a weaker *substitute* for weighting, not a complement.**
+   With weights off, rebalancing nudges rare recall up (clean_nw 0.560 →
+   oversample_nw 0.582 / physics_nw 0.568, not significant). But *stacking*
+   rebalancing on top of weighting **hurts** (clean 0.612 → oversample/physics
+   0.574/0.569). The two over-correct together, pushing toward the majority.
+4. **Physics still ≈ duplication** in every regime (physics_nw 0.568 ≈
+   oversample_nw 0.582) — consistent with D1: the synthetic content carries no
+   real rare-fault signal.
+
+**Combined D1 + D2 diagnosis.** The current augmentation fails for *two
+independent* reasons: the synthetic images are structurally fake (D1, AUC 0.97),
+**and** its rebalancing role is redundant-to-harmful given class weighting
+already handles imbalance more effectively (D2). To be useful, a generator must
+(a) add *real* rare-fault signal — i.e. close the D1 gap (→ v2 below) — and (b)
+be deployed without fighting the class weights (e.g. weight-off, or mixed at a
+controlled fraction).
 
 ## v2 generator — first iteration
 
