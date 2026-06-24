@@ -69,14 +69,13 @@ class DiscDataset(Dataset):
         return self.t(img), self.labels[i], self.clss[i]
 
 
-def gather(seed: int):
+def gather(seed: int, syn_root: Path):
     rng = np.random.default_rng(seed)
     real = load_splits()["train"]
     real = real[real["label"].isin(AUG_CLASSES)]
     real_paths = real["path"].tolist()
     real_cls = real["label"].tolist()
 
-    syn_root = PROCESSED_DIR / "synthetic"
     syn_paths, syn_cls = [], []
     for cls in AUG_CLASSES:
         for p in sorted((syn_root / cls).glob("*.jpg")):
@@ -104,14 +103,16 @@ def main() -> None:
     ap.add_argument("--batch_size", type=int, default=32)
     ap.add_argument("--blur", type=float, default=0.0,
                     help="Gaussian blur radius applied to both sets (low-pass test)")
+    ap.add_argument("--synthetic-dir", default=str(PROCESSED_DIR / "synthetic"),
+                    help="directory of synthetic images to test (e.g. .../synthetic_v2)")
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
     set_seed(args.seed)
     device = get_device()
-    print(f"Device: {device}  | blur={args.blur}")
+    print(f"Device: {device}  | blur={args.blur}  | synthetic={args.synthetic_dir}")
 
-    trp, trl, trc, vap, val, vac = gather(args.seed)
+    trp, trl, trc, vap, val, vac = gather(args.seed, Path(args.synthetic_dir))
     pin = device.type == "cuda"
     train_loader = DataLoader(DiscDataset(trp, trl, trc, args.blur),
                               batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=pin)

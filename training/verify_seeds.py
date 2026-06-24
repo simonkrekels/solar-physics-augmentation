@@ -45,6 +45,7 @@ from training.train import get_device
 from augmentation.heat_equation import ANOMALY_CLASSES, SyntheticAugmenter
 
 CONDITIONS = ["clean", "oversample", "randaugment", "physics"]
+EXTRA_CONDITIONS = ["physics_v2"]   # selectable but not run by default
 PREDS_PATH = Path("verify_preds.csv")
 SUMMARY_PATH = Path("verify_summary.csv")
 
@@ -91,6 +92,11 @@ def build_condition(name: str, train_df: pd.DataFrame, seed: int, target_min: in
     if name == "physics":
         aug = SyntheticAugmenter(train_df, seed=seed).augment_split(
             train_df, target_min=target_min, output_dir=PROCESSED_DIR / "synthetic")
+        return aug, None
+    if name == "physics_v2":
+        from augmentation.heat_equation_v2 import SyntheticAugmenterV2
+        aug = SyntheticAugmenterV2(train_df, seed=seed).augment_split(
+            train_df, target_min=target_min, output_dir=PROCESSED_DIR / "synthetic_v2")
         return aug, None
     raise ValueError(f"unknown condition: {name}")
 
@@ -168,7 +174,8 @@ def analyze(target_min: int, n_boot: int, baseline: str = "physics") -> None:
         return
     preds = pd.read_csv(PREDS_PATH)
     present = list(preds["condition"].unique())
-    order = CONDITIONS + [f"{c}_nw" for c in CONDITIONS]
+    base_order = CONDITIONS + EXTRA_CONDITIONS
+    order = base_order + [f"{c}_nw" for c in base_order]
     conditions = [c for c in order if c in present] + [c for c in present if c not in order]
     seeds = sorted(int(s) for s in preds["seed"].unique())
     classes = sorted(preds["y_true"].unique())
@@ -282,8 +289,9 @@ def analyze(target_min: int, n_boot: int, baseline: str = "physics") -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seeds", nargs="+", type=int, default=[42, 1, 2])
+    _all = CONDITIONS + EXTRA_CONDITIONS
     ap.add_argument("--conditions", nargs="+", default=CONDITIONS,
-                    choices=CONDITIONS + [f"{c}_nw" for c in CONDITIONS],
+                    choices=_all + [f"{c}_nw" for c in _all],
                     help="'_nw' suffix = same data, class weighting OFF")
     ap.add_argument("--append", action="store_true",
                     help="append to existing verify_preds.csv instead of overwriting")

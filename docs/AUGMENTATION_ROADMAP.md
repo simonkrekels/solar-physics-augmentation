@@ -64,6 +64,31 @@ synthetic faults don't look like real faults, so their features don't transfer.
 **D2 — rebalance vs class-weighting (running).** `verify_seeds.py` with the
 `*_nw` conditions (class weighting off). Results pending.
 
+## v2 generator — first iteration
+
+`augmentation/heat_equation_v2.py` (`SyntheticAugmenterV2`, writes to
+`data/processed/synthetic_v2/`). Targets the four defects D1 + visual inspection
+exposed (see `docs/montage_v2.png`, real | old | v2):
+
+| Defect (v1) | v2 fix |
+|---|---|
+| Steady-state → over-diffused round blobs | **transient** diffusion, finite sampled time → localized, shape-preserving |
+| 64×64 square grid resized to 24×40 (aspect warp) | solve at **native aspect**, super-sampled |
+| Implausibly smooth, no sensor noise | **grain calibrated** to real high-freq residual (σ≈3.7) |
+| Soiling = smooth *darkening*; Diode = hard bright stripes | Soiling = **bright streaky** edge-weighted patches; Diode = **faint** soft bands; per-class **contrast calibrated** to real (Hot-Spot 22, Soiling 61, …) |
+
+**Status:** visually much closer to real. **Not yet quantitatively validated** —
+the two judgements both need the GPU (busy with D2):
+
+1. **Discriminator re-test:** `diagnose_domain_gap.py --synthetic-dir
+   data/processed/synthetic_v2` — target: AUC drops from 0.97 toward ~0.7.
+2. **Does it clear the bar:** `verify_seeds.py --conditions physics_v2 ...` vs
+   `clean`/`oversample` on rare-class recall.
+
+Known tunable: grain may be double-counted (the No-Anomaly base already carries
+sensor noise), so the discriminator may prefer a lower added σ — to be tuned
+against AUC rather than by eye.
+
 ## Thrust A — make the physics earn its place (realism)
 
 Ordered by expected leverage. Each is independently A/B-testable.
