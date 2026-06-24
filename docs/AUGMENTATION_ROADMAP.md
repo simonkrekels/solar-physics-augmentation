@@ -34,11 +34,35 @@ to invest in.
 | # | Experiment | Answers | Cost |
 |---|---|---|---|
 | D1 | Train a **synthetic-vs-real discriminator** on the synthetic set | H1: if AUC ≈ 1.0, realism is *the* problem | 1 short run |
-| D2 | **Decouple rebalance from weighting**: augment with class weights *off*; and mix synthetic at a fixed batch *fraction* instead of topping up to 500 | H2: does the interaction explain the rare-recall drop? | reuse harness |
+| D2 | **Decouple rebalance from weighting**: augment with class weights *off* | H2: does the interaction explain the rare-recall drop? | reuse harness |
 | D3 | **Quantity/fraction sweep** (target_min ∈ {250, 500, 1000}) | confirms diminishing/negative returns from volume | reuse harness |
 
 If D2 alone recovers rare-class recall, the generator may be fine and the fix is
 *how we train with it* — much cheaper than rebuilding the physics.
+
+### Diagnostic results
+
+**D1 — domain gap is LARGE and structural (H1 confirmed).**
+`training/diagnose_domain_gap.py` trains an EfficientNet-B0 to separate synthetic
+from real images of the same four classes (balanced; real images JPEG-round-tripped
+to match the synthetics' extra compression generation).
+
+| Low-pass blur | Best val AUC |
+|---|---|
+| none | **0.966** |
+| radius 2 | 0.934 |
+| radius 4 | 0.867 |
+
+The discriminator assigns P(synthetic) ≈ 0.85–0.97 to synthetics vs 0.09–0.24 to
+reals. Crucially the gap **survives heavy blur** (AUC 0.87 at radius 4), so it is
+not seams or JPEG artifacts — it is the **coarse shape/structure** of the
+steady-state heat blobs. This directly explains the negative result: the
+synthetic faults don't look like real faults, so their features don't transfer.
+→ Realism work (Thrust A, especially #1 time-dependent and #3 structure-aware) is
+*required*, and cosmetic fixes (blending/compression) won't be enough.
+
+**D2 — rebalance vs class-weighting (running).** `verify_seeds.py` with the
+`*_nw` conditions (class weighting off). Results pending.
 
 ## Thrust A — make the physics earn its place (realism)
 

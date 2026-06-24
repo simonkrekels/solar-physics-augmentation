@@ -103,8 +103,14 @@ def append_csv(df: pd.DataFrame, path: Path) -> None:
 # Training phase
 # --------------------------------------------------------------------------- #
 def run_training(args, train_df, val_df, test_df, classes, device) -> None:
-    for stale in (PREDS_PATH, SUMMARY_PATH):
-        stale.unlink(missing_ok=True)
+    if not args.append:
+        for stale in (PREDS_PATH, SUMMARY_PATH):
+            stale.unlink(missing_ok=True)
+
+    done = set()
+    if args.append and PREDS_PATH.exists():
+        ex = pd.read_csv(PREDS_PATH, usecols=["seed", "condition"]).drop_duplicates()
+        done = {(int(s), c) for s, c in ex.itertuples(index=False)}
 
     img_size = input_size_for(args.model)
     common = dict(
@@ -115,11 +121,18 @@ def run_training(args, train_df, val_df, test_df, classes, device) -> None:
 
     for seed in args.seeds:
         for cond in args.conditions:
-            print(f"===== seed {seed} :: {cond} =====")
-            cond_df, tfm = build_condition(cond, train_df, seed, args.target_min_samples, img_size)
+            if (seed, cond) in done:
+                print(f"skip seed {seed} :: {cond} (already in {PREDS_PATH})")
+                continue
+            # A trailing "_nw" means: same data condition, but class weighting OFF.
+            base = cond[:-3] if cond.endswith("_nw") else cond
+            use_weights = not cond.endswith("_nw")
+            print(f"===== seed {seed} :: {cond}  (class_weights={use_weights}) =====")
+            cond_df, tfm = build_condition(base, train_df, seed, args.target_min_samples, img_size)
             try:
                 res = train_one(args.model, cond_df, val_df, test_df, classes, device,
-                                seed=seed, train_transform=tfm, return_preds=True, **common)
+                                seed=seed, train_transform=tfm, return_preds=True,
+                                class_weights=use_weights, **common)
             except Exception as exc:  # noqa: BLE001 — keep the long sweep alive
                 print(f"  !! {cond} (seed {seed}) failed: {exc}")
                 continue
@@ -154,7 +167,9 @@ def analyze(target_min: int, n_boot: int, baseline: str = "physics") -> None:
         print(f"No {PREDS_PATH}; nothing to analyze.")
         return
     preds = pd.read_csv(PREDS_PATH)
-    conditions = [c for c in CONDITIONS if c in preds["condition"].unique()]
+    present = list(preds["condition"].unique())
+    order = CONDITIONS + [f"{c}_nw" for c in CONDITIONS]
+    conditions = [c for c in order if c in present] + [c for c in present if c not in order]
     seeds = sorted(int(s) for s in preds["seed"].unique())
     classes = sorted(preds["y_true"].unique())
     code = {c: i for i, c in enumerate(classes)}
@@ -267,7 +282,11 @@ def analyze(target_min: int, n_boot: int, baseline: str = "physics") -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seeds", nargs="+", type=int, default=[42, 1, 2])
-    ap.add_argument("--conditions", nargs="+", default=CONDITIONS, choices=CONDITIONS)
+    ap.add_argument("--conditions", nargs="+", default=CONDITIONS,
+                    choices=CONDITIONS + [f"{c}_nw" for c in CONDITIONS],
+                    help="'_nw' suffix = same data, class weighting OFF")
+    ap.add_argument("--append", action="store_true",
+                    help="append to existing verify_preds.csv instead of overwriting")
     ap.add_argument("--model", default="efficientnet_b0")
     ap.add_argument("--epochs", type=int, default=15)
     ap.add_argument("--batch_size", type=int, default=32)

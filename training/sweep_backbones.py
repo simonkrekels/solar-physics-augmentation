@@ -67,11 +67,13 @@ def train_one(
     seed: int,
     train_transform=None,
     return_preds: bool = False,
+    class_weights: bool = True,
 ) -> dict:
     """Fine-tune one backbone and return its test metrics.
 
     ``train_transform`` overrides the train-split augmentation (val/test stay
     clean). ``return_preds`` adds raw test predictions/labels to the result.
+    ``class_weights`` toggles inverse-frequency class weighting of the loss.
     """
     set_seed(seed)  # identical init/order for every model
 
@@ -94,7 +96,8 @@ def train_one(
 
     model = build_model(len(classes), model_name=model_name, pretrained=True).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    criterion = nn.CrossEntropyLoss(weight=compute_class_weights(train_df, classes).to(device))
+    weight = compute_class_weights(train_df, classes).to(device) if class_weights else None
+    criterion = nn.CrossEntropyLoss(weight=weight)
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = SequentialLR(
         optimizer,
