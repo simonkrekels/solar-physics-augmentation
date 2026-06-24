@@ -191,6 +191,37 @@ real-image duplication / copy-paste**, and the correct product conclusion is
 rare-class recall above `clean` on the harness, that negative result is itself a
 publishable, portfolio-worthy finding, and we stop before over-investing.
 
+## SimGAN refiner — attempted, did not clear the realism gate
+
+`augmentation/refiner.py`: a residual refiner $R$ (physics proposes structure,
+$R$ learns appearance) trained adversarially + self-reg $\lambda\lVert R(x)-x\rVert_1$,
+then scored by an **independent** discriminator (Stage-1 gate; target AUC $\le 0.75$).
+
+| Variant | What $R$ did | Stage-1 AUC |
+|---|---|---|
+| v2 no-grain (input) | — | 0.934 |
+| refiner, **patch** D | collapsed to near-identity | $\approx$0.93 (no change) |
+| refiner, **global** D | added frame borders + banding artifacts | **0.980 (worse)** |
+
+**It failed, for diagnosable reasons:**
+1. **The in-loop discriminator never learned to separate** (stayed at chance,
+   both patch and global). At $24\times40$, a small from-scratch $D$ cannot
+   perceive the gap that the pretrained 224-px EfficientNet scorer sees — so $R$
+   trained against an uninformative adversary and introduced *new* artifacts the
+   scorer trivially catches.
+2. **SimGAN refines appearance, but D1 showed the gap is *structural*** (coarse
+   shape, survives blur). A self-reg-constrained refiner cannot change coarse
+   structure; freed (low $\lambda$, global $D$) it adds spurious structure.
+3. **~612 real images** make the adversarial game unstable.
+
+**Conclusion.** Learned refinement *on top of the additive-blend paradigm* does
+not close the gap — the second realism attempt to fail (after v2). The remaining
+candidates are genuine paradigm shifts: **perturb real fault images** (not
+synthesise onto clean bases); **synthetic-as-pretraining-only**; or accept the
+well-characterised negative result. A stronger in-loop adversary (a 224-px
+EfficientNet $D$) is the one untried lever, but the structural-gap argument
+predicts limited payoff.
+
 ## Suggested first sprint
 
 1. D1 (discriminator) + D2 (decouple rebalance/weighting) — diagnose H1 vs H2.
