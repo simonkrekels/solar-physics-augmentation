@@ -14,3 +14,14 @@ checkpoints/
 project_plan_thermal_solar.md
 .DS_Store
 *.log
+# LaTeX auxiliary files (keep .tex, .bib, .pdf)
+*.aux
+*.bcf
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
