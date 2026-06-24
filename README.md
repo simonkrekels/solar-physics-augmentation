@@ -78,25 +78,37 @@ approximates.
 
 ### Reading these numbers honestly
 
-A +9.8-point headline is easy to over-claim, so the project includes a
-follow-up analysis (`EXPERIMENTS.md`) that decomposes where the gain actually
-comes from. Two findings temper the headline:
+A +9.8-point headline is easy to over-claim, so the project stress-tests it
+(full analysis in `EXPERIMENTS.md`). Under rigorous evaluation the headline does
+**not** hold up — and surfacing that is the point:
 
 - **Most of the gap is the training schedule, not the augmentation.** The
-  30-epoch baseline is *undertrained*: its slow cosine schedule combined with
-  early stopping halts it at epoch 12, before the learning-rate anneal sharpens
-  the model. A clean model on a faster (15-epoch) schedule reaches **~78 %** with
-  no synthetic data at all — closing roughly +9 of the +9.8 points on its own.
-- **Augmentation's isolated effect is real but smaller, and verified.** On a
-  matched 15-epoch schedule, physics augmentation adds **+1.9 ± 0.6 points** test
-  accuracy (3 seeds, paired; clean 78.2 % → augmented 80.0 %, best run 80.8 %).
-  It helps on every seed. The macro-F1 gain (+0.010 ± 0.011) is within seed
-  noise, so the robust claim is on accuracy. The best single configuration found
-  is augmentation on the 15-epoch schedule.
+  30-epoch baseline is *undertrained*: a slow cosine schedule plus early stopping
+  halts it at epoch 12. A clean model on a faster 15-epoch schedule reaches
+  **~78 %** with no synthetic data — closing ~+9 of the +9.8 on its own.
+- **What's left is a rebalancing artifact, not a physics effect.** With honest
+  baselines (3 seeds, paired, bootstrap CIs), physics augmentation is
+  **statistically indistinguishable from plain oversampling** — duplicating real
+  rare-class images matches it (and slightly beats it on accuracy: 80.7 % vs
+  80.0 %). The synthetic pixels add nothing over copy-paste.
+- **It does not help the rare faults it was built for.** The accuracy bump comes
+  from the *majority* class (No-Anomaly recall 0.88 vs 0.85), not the rare ones.
+  On rare-class recall, physics is the **worst** of {clean, oversample,
+  randaugment, physics} — and significantly below doing nothing.
 
-The takeaway: physics-grounded augmentation genuinely helps under-represented
-classes, but a fair attribution requires a well-tuned baseline — and stating the
-effect size with seed variance rather than a single lucky run.
+| Condition (15-epoch, 3-seed mean) | Accuracy | Rare-class recall |
+|---|---|---|
+| clean | 78.2 % | 0.612 |
+| oversample (duplicate reals) | **80.7 %** | 0.574 |
+| randaugment | 78.2 % | **0.615** |
+| physics-augmented | 80.0 % | 0.569 |
+
+The takeaway: **this heat-equation generator (steady-state blobs, additive RGB
+blend) is a weaker-than-duplication rebalancing trick, not a source of useful
+rare-fault signal.** That indicts the current implementation, not physics-informed
+augmentation in principle — see `docs/AUGMENTATION_ROADMAP.md` for the realism
+upgrades that could clear the oversample bar, now measurable against a
+metric-appropriate, baseline-controlled harness (`training/verify_seeds.py`).
 
 ### Backbone choice
 

@@ -111,3 +111,83 @@ seed but within noise: +0.0104 ± 0.0105 (per-seed +0.0073 / +0.0018 / +0.0221).
 So the robust, multi-seed claim is on **test accuracy**, not macro F1. The clean
 baseline is remarkably stable (acc std 0.0019); augmentation adds both a higher
 mean and more variance.
+
+> ⚠️ **This "the effect holds" conclusion is superseded by the honest-baseline
+> analysis below.** The +1.9 pt accuracy gain is real but is a *rebalancing*
+> effect (cheap duplication matches it) and does **not** come from the rare
+> classes. Read the next section.
+
+## Honest baselines & per-class recall — the augmentation does not beat duplication ⚠️
+
+The clean-vs-augmented comparison above asks the wrong question. The right ones:
+(1) does physics synthesis beat the *cheap* ways to rebalance (duplicating real
+images, or generic strong augmentation)? and (2) does it help the **rare fault
+classes** it was designed for — measured with uncertainty, since each has only
+~25 test images?
+
+`training/verify_seeds.py` now trains four conditions on the same fixed splits,
+3 seeds each, 15-epoch schedule, and bootstraps per-class recall CIs:
+
+- **clean** — real data only (control)
+- **oversample** — rare classes *duplicated* (with replacement) to `target_min`
+  (= 500); rebalance-only, no new pixels
+- **randaugment** — real data + RandAugment; strong generic-aug control
+- **physics** — real data + heat-equation synthetic samples to `target_min`
+
+`oversample` and `physics` top up the *same* classes to the *same* target, so
+`physics − oversample` isolates the synthetic **signal** from the rebalancing.
+
+```bash
+uv run python -m training.verify_seeds --seeds 42 1 2     # ~12h on MPS
+uv run python -m training.verify_seeds --analyze-only     # re-report only
+```
+
+**Headline (mean ± std across 3 seeds):**
+
+| Condition | Accuracy | Macro F1 | Macro recall | Rare-class recall |
+|---|---|---|---|---|
+| clean | 0.782 ± 0.002 | 0.658 | 0.699 | **0.612** |
+| **oversample** | **0.807 ± 0.006** | **0.678** | 0.697 | 0.574 |
+| randaugment | 0.782 ± 0.002 | 0.654 | 0.702 | 0.615 |
+| physics | 0.800 ± 0.006 | 0.668 | 0.693 | 0.569 |
+
+**Paired deltas vs physics (bootstrap 95% CI; `verify_deltas.csv`):**
+
+| Comparison | Metric | Δ | 95% CI | Sig? |
+|---|---|---|---|---|
+| physics − oversample | accuracy/recall | ~0 | spans 0 | no |
+| physics − clean | rare-class recall | **−0.043** | [−0.082, −0.003] | **yes** |
+| physics − randaugment | rare-class recall | −0.046 | [−0.098, +0.009] | no |
+
+**Findings:**
+
+1. **Physics synthesis does not beat trivial oversampling.** On accuracy, plain
+   duplication (0.807) actually *edges out* physics (0.800); on macro F1, macro
+   recall, and rare-class recall they are statistically indistinguishable. The
+   heat-equation pixels add nothing over copy-paste.
+2. **The accuracy gain is a rebalancing artifact, not rare-fault improvement.**
+   Physics' +1.9 pt over clean comes from the **majority** class (No-Anomaly
+   recall 0.878 vs clean 0.846), not the rare classes. On rare-class recall
+   physics is the *worst* of the four conditions, and significantly below doing
+   nothing (clean). Per-class, physics is worst-or-near-worst on Hot-Spot (0.523
+   vs 0.559), Hot-Spot-Multi (0.477 vs 0.595), and Soiling (0.355 vs
+   randaugment's 0.419); only Diode-Multi is easy for all (~0.95).
+3. **Likely mechanism.** The loss already uses inverse-frequency class weights.
+   Topping rare classes up to 500 — by *any* means — makes them less rare, which
+   softens their upweighting and shifts the precision/recall trade toward the
+   majority. Net: majority accuracy ↑, rare-class recall flat-to-down. Both
+   oversample and physics do this; the synthetic geometry adds no rare-class
+   signal on top and may inject slightly misleading structure.
+
+**Verdict.** Under a metric-appropriate, baseline-controlled, CI'd evaluation,
+the current heat-equation augmentation **does not support the project's central
+claim**. It is a (weaker-than-duplication) rebalancing trick, not a source of
+useful rare-fault signal. This indicts *this generator* (steady-state blobs and
+strips, additive RGB blend) — not physics-informed augmentation in principle.
+See `docs/AUGMENTATION_ROADMAP.md` for the realism upgrades that could clear the
+oversample bar, now measurable against this harness.
+
+**Caveats.** Rare-class test support is ~25 images each, so CIs are wide and the
+`physics < clean` significance is marginal. The robust, tight-CI finding is the
+one that matters most: **physics ≈ oversample**, i.e. the synthesis earns
+nothing over duplication.
