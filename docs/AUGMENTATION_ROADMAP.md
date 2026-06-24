@@ -222,6 +222,27 @@ well-characterised negative result. A stronger in-loop adversary (a 224-px
 EfficientNet $D$) is the one untried lever, but the structural-gap argument
 predicts limited payoff.
 
+## Perturbing real faults — Stage 1 CLEARED the realism gate
+
+`augmentation/perturb.py` (`RealFaultAugmenter`): start from a *real* fault crop
+and apply the heat equation to the fault itself. The heat-evolution operator is
+Gaussian diffusion, so we decompose `image = background + fault + grain`, then
+diffuse (thermal time) and rescale (severity) only the fault, keeping the *real*
+background and grain. Realistic by construction; diverse in physically meaningful
+axes (severity, spread, orientation).
+
+**Stage 1 (realism) — passed.** Discriminator real-vs-perturbed AUC **0.711**
+(target ≤0.75), vs 0.93–0.98 for every synthesise-onto-clean-base approach. The
+gap is finally closed (Soiling ≈ chance, 0.52). This is the first generator to
+clear the bar — confirming the diagnosis that the gap was *structural* and that
+starting from real structure is the fix.
+
+**Stage 2 (utility) — running.** `verify_seeds --conditions perturb perturb_nw`
+(3 seeds), comparing physics-perturbed reals against plain `oversample`
+(duplication) and `clean` on rare-class recall, weights on and off. The decisive
+test of the project's thesis: does physically perturbing real faults beat simply
+duplicating them? Results pending.
+
 ## Suggested first sprint
 
 1. D1 (discriminator) + D2 (decouple rebalance/weighting) — diagnose H1 vs H2.
