@@ -115,12 +115,15 @@ def synthesise_v2(
     *,
     supersample: int = 3,
     contrast: float = 35.0,
-    grain_std: float = 5.0,
+    grain_std: float = 0.0,
 ) -> Image.Image:
     """Generate one v2 synthetic image.
 
     `contrast` is the target peak fault amplitude in grey levels (calibrate per
-    class from real data). `grain_std` is the sensor-noise std to inject.
+    class from real data). `grain_std` injects *iid* sensor noise — but the D1
+    discriminator showed this is actively HARMFUL (AUC 1.00 with grain vs 0.93
+    without): the base already carries real, spatially-correlated sensor noise,
+    so adding iid noise is a giveaway. Default off.
     """
     if rng is None:
         rng = np.random.default_rng()
@@ -153,9 +156,11 @@ class SyntheticAugmenterV2:
     images, so the synthetics match real sensor statistics.
     """
 
-    def __init__(self, train_df, seed: int = 42, supersample: int = 3):
+    def __init__(self, train_df, seed: int = 42, supersample: int = 3,
+                 add_grain: bool = False):
         self.rng = np.random.default_rng(seed)
         self.supersample = supersample
+        self.add_grain = add_grain   # off by default — D1 showed iid grain hurts
         self._base_paths = train_df.loc[train_df["label"] == "No-Anomaly", "path"].tolist()
         if not self._base_paths:
             raise ValueError("train_df must contain at least one No-Anomaly image")
@@ -182,7 +187,7 @@ class SyntheticAugmenterV2:
             img = synthesise_v2(class_name, self._random_base(), self.rng,
                                 supersample=self.supersample,
                                 contrast=self.contrast.get(class_name, 35.0),
-                                grain_std=self.grain_std)
+                                grain_std=self.grain_std if self.add_grain else 0.0)
             p = out_cls / f"syn_{i:05d}.jpg"
             img.save(p, quality=90)
             paths.append(p)

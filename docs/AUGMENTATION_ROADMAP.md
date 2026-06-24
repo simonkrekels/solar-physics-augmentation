@@ -111,17 +111,33 @@ exposed (see `docs/montage_v2.png`, real | old | v2):
 | Implausibly smooth, no sensor noise | **grain calibrated** to real high-freq residual (σ≈3.7) |
 | Soiling = smooth *darkening*; Diode = hard bright stripes | Soiling = **bright streaky** edge-weighted patches; Diode = **faint** soft bands; per-class **contrast calibrated** to real (Hot-Spot 22, Soiling 61, …) |
 
-**Status:** visually much closer to real. **Not yet quantitatively validated** —
-the two judgements both need the GPU (busy with D2):
+**Status: v2 looked better to the eye but FAILED the discriminator test.**
+This is the value of D1-as-a-metric — visual realism was misleading.
 
-1. **Discriminator re-test:** `diagnose_domain_gap.py --synthetic-dir
-   data/processed/synthetic_v2` — target: AUC drops from 0.97 toward ~0.7.
-2. **Does it clear the bar:** `verify_seeds.py --conditions physics_v2 ...` vs
-   `clean`/`oversample` on rare-class recall.
+| Generator | Discriminator AUC |
+|---|---|
+| v1 (steady-state blobs) | 0.966 |
+| v2 **with** added iid grain | **1.000** |
+| v2 **without** grain (ablation) | 0.934 |
 
-Known tunable: grain may be double-counted (the No-Anomaly base already carries
-sensor noise), so the discriminator may prefer a lower added σ — to be tuned
-against AUC rather than by eye.
+1. **The added grain backfired (confirmed).** Removing it dropped AUC 1.00→0.93
+   — the predicted double-counting: the base already carries real,
+   spatially-correlated sensor noise, so iid grain is a giveaway. `add_grain` is
+   now off by default.
+2. **The structural fixes didn't close the gap.** v2-no-grain (0.934) ≈ v1
+   (0.966), likely within noise — both remain *trivially separable* (AUC > 0.9).
+   Per class, Diode-Multi is closest to real (P(syn)≈0.67), the multi-spot
+   classes least (Hot-Spot-Multi ≈ 1.0).
+
+**Implication.** Additive blending of a smooth synthetic field onto a real
+No-Anomaly base is near a detectability ceiling at 24×40: incremental geometry
+tweaks give marginal gains. Closing the gap likely needs a *different paradigm*,
+not a better blob — candidates: (a) **perturb real fault images** instead of
+synthesising onto clean bases; (b) **match noise spatial-correlation** rather
+than adding iid; (c) treat synthetic as **pretraining only**; or (d) accept that
+the rigorous negative result — class weighting beats synthetic rebalancing here —
+*is* the finding. The expensive downstream test (`--conditions physics_v2`) is
+not worth running until a generator first clears the discriminator bar.
 
 ## Thrust A — make the physics earn its place (realism)
 
