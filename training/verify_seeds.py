@@ -45,7 +45,7 @@ from training.train import get_device
 from augmentation.heat_equation import ANOMALY_CLASSES, SyntheticAugmenter
 
 CONDITIONS = ["clean", "oversample", "randaugment", "physics"]
-EXTRA_CONDITIONS = ["physics_v2"]   # selectable but not run by default
+EXTRA_CONDITIONS = ["physics_v2", "perturb"]   # selectable but not run by default
 PREDS_PATH = Path("verify_preds.csv")
 SUMMARY_PATH = Path("verify_summary.csv")
 
@@ -97,6 +97,11 @@ def build_condition(name: str, train_df: pd.DataFrame, seed: int, target_min: in
         from augmentation.heat_equation_v2 import SyntheticAugmenterV2
         aug = SyntheticAugmenterV2(train_df, seed=seed).augment_split(
             train_df, target_min=target_min, output_dir=PROCESSED_DIR / "synthetic_v2")
+        return aug, None
+    if name == "perturb":
+        from augmentation.perturb import RealFaultAugmenter
+        aug = RealFaultAugmenter(train_df, seed=seed).augment_split(
+            train_df, target_min=target_min, output_dir=PROCESSED_DIR / "perturbed")
         return aug, None
     raise ValueError(f"unknown condition: {name}")
 
