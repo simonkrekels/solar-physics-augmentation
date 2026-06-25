@@ -237,11 +237,34 @@ gap is finally closed (Soiling ≈ chance, 0.52). This is the first generator to
 clear the bar — confirming the diagnosis that the gap was *structural* and that
 starting from real structure is the fix.
 
-**Stage 2 (utility) — running.** `verify_seeds --conditions perturb perturb_nw`
-(3 seeds), comparing physics-perturbed reals against plain `oversample`
-(duplication) and `clean` on rare-class recall, weights on and off. The decisive
-test of the project's thesis: does physically perturbing real faults beat simply
-duplicating them? Results pending.
+**Stage 2 (utility) — FAILED: realism did not translate to utility.**
+
+| Condition | Rare-class recall (95% CI) |
+|---|---|
+| clean (weights on) | **0.612** [0.55, 0.68] — best overall |
+| oversample | 0.574 |
+| perturb | 0.572 |
+| oversample_nw | 0.582 |
+| perturb_nw | 0.572 |
+
+`perturb − oversample` rare-recall $= -0.0015$, CI $[-0.038, +0.035]$ — dead even.
+In **both** weight regimes, physically perturbing real faults is statistically
+indistinguishable from simply duplicating them, and below plain `clean`.
+
+**The definitive conclusion.** We made augmentation *realistic* (perturb cleared
+the Stage-1 gate at AUC 0.711) and it *still* gave no rare-class benefit over
+duplication. So augmentation quality was never the bottleneck. The limiting
+factors are (i) ~150 real images per rare class is too little information for any
+augmentation to manufacture genuinely new discriminative signal, and (ii) class
+weighting already handles the imbalance better than rebalancing (D2). **For
+rare-fault detection on this dataset, augmentation — synthetic or real-derived,
+crude or realistic — is not the lever; class weighting is.** Every plausible form
+of the physics-augmentation thesis has now been tested and bounded.
+
+Productive next directions are off the generator entirely: long-tail losses
+(focal/LDAM, which target the rare-class boundary without fighting the weights),
+on-domain self-supervised pretraining, or simply collecting more real rare-fault
+labels.
 
 ## Suggested first sprint
 
