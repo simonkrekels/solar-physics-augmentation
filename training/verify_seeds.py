@@ -45,7 +45,8 @@ from training.train import get_device
 from augmentation.heat_equation import ANOMALY_CLASSES, SyntheticAugmenter
 
 CONDITIONS = ["clean", "oversample", "randaugment", "physics"]
-EXTRA_CONDITIONS = ["physics_v2", "perturb", "logit_adj"]  # selectable, not run by default
+EXTRA_CONDITIONS = ["physics_v2", "perturb",  # selectable, not run by default
+                    "logit_adj", "logit_adj_t05", "logit_adj_t15", "logit_adj_t20"]
 PREDS_PATH = Path("verify_preds.csv")
 SUMMARY_PATH = Path("verify_summary.csv")
 
@@ -139,17 +140,20 @@ def run_training(args, train_df, val_df, test_df, classes, device) -> None:
             # A trailing "_nw" means: same data condition, but class weighting OFF.
             if cond.startswith("logit_adj"):
                 base, use_weights, loss_type = "clean", False, "logit_adj"
+                # optional "_tNN" suffix sets τ = NN/10 (e.g. logit_adj_t15 → 1.5)
+                tau = int(cond.split("_t")[1]) / 10.0 if "_t" in cond else args.logit_adjust_tau
             else:
                 base = cond[:-3] if cond.endswith("_nw") else cond
                 use_weights = not cond.endswith("_nw")
-                loss_type = "ce"
-            print(f"===== seed {seed} :: {cond}  (weights={use_weights}, loss={loss_type}) =====")
+                loss_type, tau = "ce", args.logit_adjust_tau
+            print(f"===== seed {seed} :: {cond}  (weights={use_weights}, loss={loss_type}"
+                  f"{f', τ={tau}' if loss_type=='logit_adj' else ''}) =====")
             cond_df, tfm = build_condition(base, train_df, seed, args.target_min_samples, img_size)
             try:
                 res = train_one(args.model, cond_df, val_df, test_df, classes, device,
                                 seed=seed, train_transform=tfm, return_preds=True,
                                 class_weights=use_weights, loss_type=loss_type,
-                                logit_adjust_tau=args.logit_adjust_tau, **common)
+                                logit_adjust_tau=tau, **common)
             except Exception as exc:  # noqa: BLE001 — keep the long sweep alive
                 print(f"  !! {cond} (seed {seed}) failed: {exc}")
                 continue
@@ -300,10 +304,9 @@ def analyze(target_min: int, n_boot: int, baseline: str = "physics") -> None:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--seeds", nargs="+", type=int, default=[42, 1, 2])
-    _all = CONDITIONS + EXTRA_CONDITIONS
     ap.add_argument("--conditions", nargs="+", default=CONDITIONS,
-                    choices=_all + [f"{c}_nw" for c in _all],
-                    help="'_nw' suffix = same data, class weighting OFF")
+                    help="data condition; '_nw' = weighting off; logit_adj[_tNN] "
+                         "= logit-adjusted loss with τ=NN/10")
     ap.add_argument("--append", action="store_true",
                     help="append to existing verify_preds.csv instead of overwriting")
     ap.add_argument("--model", default="efficientnet_b0")
