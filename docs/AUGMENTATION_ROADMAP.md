@@ -283,14 +283,32 @@ inverse-frequency weighting trades accuracy for rare recall (D2: 0.84→0.78),
 logit adjustment improves both, because it shifts the decision boundary by the
 class priors rather than reweighting gradients.
 
-**Caveat:** the rare-recall gain (+0.022) is within bootstrap noise
-(CI $[-0.059,+0.015]$; the perennial ~25-images-per-class problem), but the
-accuracy gain is robust. The operating point is unambiguously better.
+At τ=1.0 the rare-recall gain (+0.022) is within bootstrap noise. **τ is a knob
+on the recall/accuracy frontier** (`logit_adj_tNN` → τ=NN/10), and pushing it
+makes the gain large and significant (see `docs/fig_logit_adj.png`):
+
+| Condition | Accuracy | Macro recall | Rare-class recall | Δ rare vs clean (95% CI) |
+|---|---|---|---|---|
+| clean (weighted CE) | 0.782 | 0.699 | 0.612 | — |
+| logit_adj τ=1.0 | **0.808** | 0.709 | 0.634 | +0.022 [−0.016, +0.058] |
+| logit_adj τ=1.5 | 0.763 | **0.716** | 0.696 | **+0.084 [+0.038, +0.131]** ✓ |
+| logit_adj τ=2.0 | 0.683 | 0.703 | **0.728** | **+0.116 [+0.071, +0.162]** ✓ |
+
+Rare-fault recall climbs 0.612 → **0.728** (+0.116, ~19% relative, CI excludes 0)
+as τ→2.0, traded against accuracy (0.808 → 0.683). The improvement is now
+**statistically significant**, not just a better point estimate.
+
+**Recommended operating points:**
+- **τ=1.5 — balanced default.** Best macro-recall of *any* condition (0.716),
+  significantly higher rare recall (0.696), only a small accuracy cost
+  (0.763 vs 0.782). Pareto-sensible for the imbalanced objective.
+- **τ=2.0 — max fault detection.** Highest rare recall (0.728) if false alarms
+  are acceptable (accuracy 0.683, precision down).
 
 **Bottom line of the whole investigation:** augmentation (any form) was not the
-lever; a principled long-tail *loss* is. Recommended change: make `logit_adj`
-the default loss (replacing inverse-frequency class weighting). Further headroom:
-LDAM + deferred reweighting, on-domain SSL pretraining, more real labels.
+lever; a principled long-tail *loss* is. Make `logit_adj` (τ≈1.5) the default,
+replacing inverse-frequency weighting. Further headroom: LDAM + deferred
+reweighting, on-domain SSL pretraining, more real labels.
 
 ## Suggested first sprint
 
