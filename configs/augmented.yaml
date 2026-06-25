@@ -9,6 +9,9 @@ seed: 42
 augmentation:
   physics_synthetic: true
   target_min_samples: 500
+loss:
+  type: ce          # legacy experiment: class-weighted CE, reproduces the
+                    # documented 78.8% as-reported number (not the new default)
 wandb:
   project: solar-thermal-cv
   run_name: physics-augmented

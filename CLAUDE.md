@@ -60,7 +60,7 @@ solar-physics-project/
 `training/model.py` wraps `timm.create_model('efficientnet_b0', pretrained=True, num_classes=N)`. Classification head replaced; ImageNet backbone kept for fine-tuning.
 
 ### Training loop
-`training/train.py` reads a YAML config, applies inverse-frequency class weights to CrossEntropyLoss, uses AdamW + 5-epoch linear warmup → CosineAnnealingLR, early stopping patience=5, and logs to W&B. Run as a module: `uv run python -m training.train --config configs/baseline.yaml`.
+`training/train.py` reads a YAML config, builds the loss from the `loss:` block (**default `logit_adj`, τ=1.5** — logit adjustment, Menon et al. 2020, which the audit showed beats inverse-frequency class weighting on rare-fault recall; set `loss.type: ce` for class-weighted cross-entropy), uses AdamW + 5-epoch linear warmup → CosineAnnealingLR, early stopping patience=5, and logs to W&B. Run as a module: `uv run python -m training.train --config configs/baseline.yaml`. `configs/baseline.yaml` is the adopted best config (clean data, 15-epoch schedule, logit_adj τ=1.5).
 
 When `augmentation.physics_synthetic: true` in config, `SyntheticAugmenter.augment_split` extends only `train_df` before the DataLoader is built — val and test are always clean real images.
 

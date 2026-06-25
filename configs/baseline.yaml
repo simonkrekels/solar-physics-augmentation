@@ -1,11 +1,18 @@
+# Default config — the best configuration from the augmentation audit
+# (docs/findings.pdf): clean data, tuned 15-epoch schedule, logit-adjusted loss.
+# No synthetic augmentation: the audit showed it does not beat oversampling and
+# the lever for rare-fault recall is the long-tail loss, not the data.
 model: efficientnet_b0
 pretrained: true
-num_epochs: 30
+num_epochs: 15
 batch_size: 32
 learning_rate: 3.0e-4
 weight_decay: 1.0e-4
 warmup_epochs: 5
 seed: 42
+loss:
+  type: logit_adj   # logit_adj | ce ; logit adjustment replaces class weighting
+  tau: 1.5          # 1.5 = balanced default; 2.0 maximises rare-fault recall
 wandb:
   project: solar-thermal-cv
   run_name: baseline

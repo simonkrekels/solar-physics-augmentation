@@ -92,7 +92,24 @@ def train(config_path: str) -> None:
     model = build_model(
         n_classes, model_name=cfg.get("model", "efficientnet_b0"), pretrained=cfg["pretrained"]
     ).to(device)
-    criterion = nn.CrossEntropyLoss(weight=compute_class_weights(train_df, classes).to(device))
+    # Default loss: logit adjustment (Menon et al. 2020). Our audit showed this
+    # beats inverse-frequency class weighting on rare-fault recall (τ=1.5:
+    # +0.084 rare recall, CI excludes 0); see docs/findings.pdf. Set
+    # `loss.type: ce` to fall back to class-weighted cross-entropy.
+    loss_cfg = cfg.get("loss", {})
+    if loss_cfg.get("type", "logit_adj") == "logit_adj":
+        tau = loss_cfg.get("tau", 1.5)
+        counts = train_df["label"].value_counts()
+        prior = torch.tensor([counts.get(c, 0) for c in classes],
+                             dtype=torch.float32, device=device)
+        log_prior = tau * torch.log(prior / prior.sum() + 1e-12)
+        _ce = nn.CrossEntropyLoss()
+        def criterion(out, lab):  # logit-adjusted; infer on raw logits
+            return _ce(out + log_prior, lab)
+        print(f"Loss: logit-adjusted cross-entropy (τ={tau})")
+    else:
+        criterion = nn.CrossEntropyLoss(weight=compute_class_weights(train_df, classes).to(device))
+        print("Loss: inverse-frequency class-weighted cross-entropy")
     optimizer = AdamW(model.parameters(), lr=cfg["learning_rate"], weight_decay=cfg["weight_decay"])
 
     warmup_sched = LinearLR(optimizer, start_factor=0.1, end_factor=1.0, total_iters=cfg["warmup_epochs"])

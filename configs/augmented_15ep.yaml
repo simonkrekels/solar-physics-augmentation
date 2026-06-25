@@ -9,6 +9,8 @@ seed: 42
 augmentation:
   physics_synthetic: true
   target_min_samples: 500
+loss:
+  type: ce          # legacy experiment: class-weighted CE (not the new default)
 wandb:
   project: solar-thermal-cv
   run_name: physics-augmented-15ep
