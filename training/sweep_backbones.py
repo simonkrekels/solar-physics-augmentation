@@ -68,6 +68,8 @@ def train_one(
     train_transform=None,
     return_preds: bool = False,
     class_weights: bool = True,
+    loss_type: str = "ce",
+    logit_adjust_tau: float = 1.0,
 ) -> dict:
     """Fine-tune one backbone and return its test metrics.
 
@@ -96,8 +98,19 @@ def train_one(
 
     model = build_model(len(classes), model_name=model_name, pretrained=True).to(device)
     n_params = sum(p.numel() for p in model.parameters())
-    weight = compute_class_weights(train_df, classes).to(device) if class_weights else None
-    criterion = nn.CrossEntropyLoss(weight=weight)
+    if loss_type == "logit_adj":
+        # Logit adjustment (Menon et al. 2020): add τ·log(prior) to logits during
+        # training; infer on raw logits. Replaces class weighting.
+        counts = train_df["label"].value_counts()
+        prior = torch.tensor([counts.get(c, 0) for c in classes],
+                             dtype=torch.float32, device=device)
+        log_prior = logit_adjust_tau * torch.log(prior / prior.sum() + 1e-12)
+        _ce = nn.CrossEntropyLoss()
+        def criterion(out, lab):  # noqa: E306
+            return _ce(out + log_prior, lab)
+    else:
+        weight = compute_class_weights(train_df, classes).to(device) if class_weights else None
+        criterion = nn.CrossEntropyLoss(weight=weight)
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = SequentialLR(
         optimizer,

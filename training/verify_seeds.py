@@ -45,7 +45,7 @@ from training.train import get_device
 from augmentation.heat_equation import ANOMALY_CLASSES, SyntheticAugmenter
 
 CONDITIONS = ["clean", "oversample", "randaugment", "physics"]
-EXTRA_CONDITIONS = ["physics_v2", "perturb"]   # selectable but not run by default
+EXTRA_CONDITIONS = ["physics_v2", "perturb", "logit_adj"]  # selectable, not run by default
 PREDS_PATH = Path("verify_preds.csv")
 SUMMARY_PATH = Path("verify_summary.csv")
 
@@ -135,15 +135,21 @@ def run_training(args, train_df, val_df, test_df, classes, device) -> None:
             if (seed, cond) in done:
                 print(f"skip seed {seed} :: {cond} (already in {PREDS_PATH})")
                 continue
+            # "logit_adj" = clean data + logit-adjusted loss (replaces weighting).
             # A trailing "_nw" means: same data condition, but class weighting OFF.
-            base = cond[:-3] if cond.endswith("_nw") else cond
-            use_weights = not cond.endswith("_nw")
-            print(f"===== seed {seed} :: {cond}  (class_weights={use_weights}) =====")
+            if cond.startswith("logit_adj"):
+                base, use_weights, loss_type = "clean", False, "logit_adj"
+            else:
+                base = cond[:-3] if cond.endswith("_nw") else cond
+                use_weights = not cond.endswith("_nw")
+                loss_type = "ce"
+            print(f"===== seed {seed} :: {cond}  (weights={use_weights}, loss={loss_type}) =====")
             cond_df, tfm = build_condition(base, train_df, seed, args.target_min_samples, img_size)
             try:
                 res = train_one(args.model, cond_df, val_df, test_df, classes, device,
                                 seed=seed, train_transform=tfm, return_preds=True,
-                                class_weights=use_weights, **common)
+                                class_weights=use_weights, loss_type=loss_type,
+                                logit_adjust_tau=args.logit_adjust_tau, **common)
             except Exception as exc:  # noqa: BLE001 — keep the long sweep alive
                 print(f"  !! {cond} (seed {seed}) failed: {exc}")
                 continue
@@ -308,6 +314,8 @@ def main() -> None:
     ap.add_argument("--warmup_epochs", type=int, default=5)
     ap.add_argument("--patience", type=int, default=5)
     ap.add_argument("--target_min_samples", type=int, default=500)
+    ap.add_argument("--logit-adjust-tau", type=float, default=1.0,
+                    help="τ for the logit_adj condition")
     ap.add_argument("--n_boot", type=int, default=2000)
     ap.add_argument("--baseline", default="physics",
                     help="condition to compute paired deltas against")
