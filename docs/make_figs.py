@@ -47,3 +47,35 @@ for r, v in zip(b, auc):
     ax.text(r.get_x() + r.get_width() / 2, v + 0.01, f"{v:.3f}", ha="center", fontsize=8)
 plt.tight_layout(); plt.savefig("docs/fig_d1_auc.png", dpi=130, bbox_inches="tight")
 print("fig_d1_auc saved")
+
+# --- Fig 3: realism gate across generator approaches (D1 AUC, from d1_*.log) ---
+labels = ["v1\nsteady-state", "v2\nno-grain", "SimGAN\nrefiner", "perturb\nreal faults"]
+auc = [0.966, 0.934, 0.980, 0.711]
+cols = ["#d62728", "#d62728", "#d62728", "#2ca02c"]
+fig, ax = plt.subplots(figsize=(6.6, 4.0))
+b = ax.bar(labels, auc, color=cols)
+ax.axhline(0.75, ls=":", c="green", lw=1.2); ax.text(3.45, 0.76, "realism gate ≤0.75", fontsize=8, color="green", ha="right")
+ax.axhline(0.5, ls="--", c="gray", lw=1); ax.text(0, 0.515, "chance", fontsize=8, color="gray")
+ax.set_ylim(0, 1.06); ax.set_ylabel("synthetic-vs-real discriminator AUC")
+ax.set_title("Closing the domain gap: only perturbing real faults passes")
+for r, v in zip(b, auc):
+    ax.text(r.get_x() + r.get_width() / 2, v + 0.012, f"{v:.3f}", ha="center", fontsize=9)
+plt.tight_layout(); plt.savefig("docs/fig_realism_gate.png", dpi=130, bbox_inches="tight")
+print("fig_realism_gate saved")
+
+# --- Fig 4: logit-adjustment τ tradeoff (verify_summary.csv + analyze aggregate CIs) ---
+tau = [1.0, 1.5, 2.0]
+rare = [0.634, 0.696, 0.728]; rlo = [0.57, 0.64, 0.67]; rhi = [0.69, 0.76, 0.79]
+acc = [0.808, 0.763, 0.683]
+fig, ax = plt.subplots(figsize=(7, 4.3))
+ax.errorbar(tau, rare, yerr=[[r - l for r, l in zip(rare, rlo)], [h - r for r, h in zip(rare, rhi)]],
+            marker="o", capsize=3, color="#d62728", label="rare-class recall (95% CI)")
+ax.plot(tau, acc, marker="s", color="#1f77b4", label="accuracy")
+ax.axhline(0.612, ls="--", color="#d62728", alpha=0.5); ax.text(2.02, 0.612, "clean rare-recall 0.612", fontsize=8, color="#d62728", va="center")
+ax.axhline(0.782, ls="--", color="#1f77b4", alpha=0.5); ax.text(2.02, 0.782, "clean acc 0.782", fontsize=8, color="#1f77b4", va="center")
+ax.set_xlabel("logit-adjustment τ"); ax.set_ylabel("score"); ax.set_xticks(tau)
+ax.set_ylim(0.55, 0.84); ax.set_xlim(0.9, 2.45)
+ax.set_title("Logit adjustment: τ trades accuracy for rare-fault recall")
+ax.legend(loc="lower left", fontsize=9); ax.grid(alpha=0.3)
+plt.tight_layout(); plt.savefig("docs/fig_logit_adj.png", dpi=130, bbox_inches="tight")
+print("fig_logit_adj saved")

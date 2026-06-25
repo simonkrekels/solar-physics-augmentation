@@ -30,7 +30,7 @@
 \usepackage[concrete]{fontsetup}
 
 \title{Auditing a physics-informed augmentation claim:\\
-from $+9.8\%$ to a diagnosed negative result}
+a negative result, and the lever it revealed}
 \author{Simon Krekels}
 \date{\today}
 
@@ -39,17 +39,21 @@ from $+9.8\%$ to a diagnosed negative result}
 
 \begin{abstract}
 A thermal solar-module classifier reported a $+9.8$ percentage-point accuracy
-gain from heat-equation--based synthetic augmentation over a baseline. Under
-rigorous evaluation the claim does not survive. Roughly $+9$ points are a
-training-schedule artifact (an undertrained baseline); the residual $\sim\!1.9$
-points are a \emph{rebalancing} effect that plain image duplication matches or
-beats, and they do not improve recall on the rare fault classes the method
-targets. Two diagnostics localise the cause: the synthetic images are trivially
-separable from real ones (discriminator AUC $0.97$), and class weighting already
-handles imbalance more effectively than synthetic rebalancing. A realism upgrade
-to the generator, although visually more convincing, measured \emph{worse}
-($\text{AUC}\,1.00$). We conclude with the implied redesign: let physics supply
-fault \emph{structure} and let a network learn the \emph{appearance}.
+gain from heat-equation--based synthetic augmentation. This report audits that
+claim end to end. Roughly $+9$ points are a training-schedule artifact; the
+residual is a class-rebalancing effect that plain image duplication matches, and
+that does not improve recall on the rare fault classes the method targets. Two
+diagnostics localise the cause --- the synthetic images are trivially separable
+from real ones (discriminator AUC $0.97$), and class weighting already handles
+the imbalance better than rebalancing. We then \emph{close} the realism gap by
+perturbing real faults with the heat equation (AUC $0.71$), and find the decisive
+result: even realistic, physically-grounded augmentation gives no rare-class
+benefit over duplication. Augmentation quality was never the bottleneck. The
+diagnosis points instead to the training loss: a logit-adjusted long-tail loss
+raises rare-fault recall from $0.612$ to $0.728$ ($+19\%$ relative, bootstrap CI
+excluding zero), a tunable trade against majority-class accuracy. The headline
+was wrong; the investigation that disproved it correctly identified the real
+lever.
 \end{abstract}
 
 \section{Setup and metrics}
@@ -57,24 +61,25 @@ fault \emph{structure} and let a network learn the \emph{appearance}.
   \item \textbf{Data.} InfraredSolarModules~\cite{raptormaps2020infrared}:
         $\sim\!20{,}000$ $24\times40$ thermal IR crops, 12 classes, heavily
         imbalanced ($\sim\!50\%$ \texttt{No-Anomaly}; four rare fault classes
-        have only $\sim\!120$--$170$ training images each).
+        --- \texttt{Diode-Multi}, \texttt{Hot-Spot}, \texttt{Hot-Spot-Multi},
+        \texttt{Soiling} --- have only $\sim\!120$--$170$ training images each).
   \item \textbf{Model.} EfficientNet-B0~\cite{tan2019efficientnet} fine-tuned
-        from ImageNet; inverse-frequency class-weighted cross-entropy;
-        warmup\,$\to$\,cosine schedule; stratified $70/15/15$ splits.
-  \item \textbf{Harness.} All comparisons are paired on one fixed test set,
-        run over 3 seeds, with bootstrap $95\%$ confidence intervals on
+        from ImageNet; warmup\,$\to$\,cosine schedule; stratified $70/15/15$
+        splits.
+  \item \textbf{Harness.} Every comparison is paired on one fixed test set, run
+        over 3 seeds, with bootstrap $95\%$ confidence intervals on
         \emph{per-class recall}.
-  \item \textbf{Key framing.} The project's objective is \emph{rare-fault
-        detection}, so the right metric is \textbf{rare-class recall}, not
-        accuracy (which is dominated by the majority class). This distinction
-        drives every conclusion below.
+  \item \textbf{Key framing.} The objective is rare-\emph{fault detection}, so
+        the figure of merit is \textbf{rare-class recall}, not accuracy (which is
+        dominated by the majority class). This distinction drives every
+        conclusion below.
 \end{itemize}
 
 \section{The headline is mostly a schedule artifact}
 The original baseline is undertrained: a slow cosine schedule plus patience-5
 early stopping halts it at epoch 12. Fixing only the schedule (a faster 15-epoch
 cosine) recovers almost the entire gap with \emph{no} synthetic data
-(Table~\ref{tab:schedule}).
+(Table~\ref{tab:schedule}). All later experiments use the 15-epoch schedule.
 
 \begin{table}[h]\centering
 \begin{tabular}{lcc}
@@ -88,14 +93,13 @@ augmented, retuned schedule & 15 ep & 0.808\\
 \bottomrule
 \end{tabular}
 \caption{The $+9.8$-point headline is mostly the difference between an
-undertrained and a well-trained baseline. A clean model on a 15-epoch schedule
-already reaches $0.784$.}
+undertrained and a well-trained baseline.}
 \label{tab:schedule}
 \end{table}
 
 \section{The backbone choice holds up}
-EfficientNet-B0 is not assumed: it wins a sweep over four \texttt{timm}
-backbones on identical clean data, \emph{and} is the smallest. Larger backbones
+EfficientNet-B0 is not assumed: it wins a sweep over four \texttt{timm} backbones
+on identical clean data, \emph{and} is the smallest --- the larger backbones
 overfit this small, imbalanced set (Table~\ref{tab:backbone}).
 
 \begin{table}[h]\centering
@@ -109,17 +113,17 @@ ConvNeXt-Tiny            & 27.8 & 0.745 & 0.635\\
 ResNet-50                & 23.5 & 0.694 & 0.577\\
 \bottomrule
 \end{tabular}
-\caption{Backbone sweep (clean data, 15-epoch schedule). Smallest model wins.}
+\caption{Backbone sweep (clean data, 15-epoch schedule).}
 \label{tab:backbone}
 \end{table}
 
 \section{Honest baselines: physics is no better than oversampling}
-The decisive test compares physics augmentation against the \emph{cheap} ways to
-rebalance. \texttt{oversample} duplicates real rare-class images to the same
-target count as the synthesiser, isolating the synthetic \emph{signal} from mere
-rebalancing; \texttt{randaugment} is a strong generic-augmentation control. We
-also toggle class weighting off (``no-weights'') to probe its interaction with
-rebalancing (Table~\ref{tab:main}).
+The decisive comparison is against the \emph{cheap} ways to rebalance.
+\texttt{oversample} duplicates real rare-class images to the same target count as
+the synthesiser, isolating the synthetic \emph{signal} from rebalancing;
+\texttt{randaugment} is a strong generic-augmentation control. We also toggle
+class weighting off (``no-weights'') to probe its interaction with rebalancing
+(Table~\ref{tab:main}).
 
 \begin{table}[h]\centering
 \begin{tabular}{llcccc}
@@ -142,118 +146,181 @@ the \emph{worst} condition on rare-class recall.}
 \label{tab:main}
 \end{table}
 
-Findings:
 \begin{itemize}
-  \item \textbf{Physics does not beat duplication.} On accuracy, \texttt{oversample}
-        ($0.807$) edges out \texttt{physics} ($0.800$); elsewhere they are within
+  \item \textbf{Physics does not beat duplication.} \texttt{oversample} ($0.807$
+        acc) edges out \texttt{physics} ($0.800$); elsewhere they are within
         noise. The synthetic pixels add nothing over copy-paste.
-  \item \textbf{The accuracy gain is a rebalancing artifact, not rare-fault
-        improvement.} Physics' $+1.9$ points over \texttt{clean} (3-seed paired
-        $+0.019\pm0.006$) come from the \emph{majority} class
-        (\texttt{No-Anomaly} recall $0.85\!\to\!0.88$); on rare-class recall
-        physics is worst, and significantly below \texttt{clean} (paired
-        $\Delta=+0.043$, $95\%$ CI $[0.003,0.082]$). See
+  \item \textbf{The accuracy gain is a rebalancing artifact.} Physics' $+1.9$
+        points over \texttt{clean} (3-seed paired $+0.019\pm0.006$) come from the
+        \emph{majority} class (\texttt{No-Anomaly} recall $0.85\!\to\!0.88$), not
+        the rare ones. On rare-class recall physics is worst, and significantly
+        below \texttt{clean} (paired $\Delta=+0.043$, CI $[0.003,0.082]$);
         Fig.~\ref{fig:rare}.
   \item \textbf{Class weighting is the strongest single lever for rare classes.}
         \texttt{clean} with weights ($0.612$) beats every other condition.
-        Turning weights off trades rare recall for accuracy ($0.78\!\to\!0.84$).
-        Data rebalancing is a weaker \emph{substitute} that \emph{hurts} when
-        stacked on weighting --- exactly the current configuration.
+        Rebalancing is a weaker \emph{substitute} that \emph{hurts} when stacked
+        on weighting.
 \end{itemize}
 
 \begin{figure}[h]\centering
-\includegraphics[width=0.92\linewidth]{fig_rare_recall.png}
+\includegraphics[width=0.9\linewidth]{fig_rare_recall.png}
 \caption{Rare-class recall with $95\%$ bootstrap CIs. Physics (red) is never the
-best bar. Wide intervals (each rare class has $\sim\!25$ test images) are
+best bar. The wide intervals ($\sim\!25$ test images per rare class) are
 themselves a finding: the evaluation is underpowered, which is why a
 metric-appropriate, CI-based harness was necessary.}
 \label{fig:rare}
 \end{figure}
 
-\section{Diagnostics: why it fails}
-Two cheap diagnostics localise the failure to \emph{two independent} causes.
+\FloatBarrier
+\section{Why it fails: two diagnostics}
+\textbf{D1 --- the synthetic images are fake (Fig.~\ref{fig:auc}).} A classifier
+separates synthetic from real images of the same classes at AUC $0.966$. The gap
+\emph{survives heavy blur} ($0.934$ at radius 2, $0.867$ at radius 4), so it lives
+in the \emph{coarse shape} of the steady-state heat blobs --- not seams or
+compression. The synthetic faults simply do not look like real faults.
 
-\textbf{D1 --- domain gap (Fig.~\ref{fig:auc}).} A classifier separates synthetic
-from real images of the same classes at AUC $0.966$. The gap survives heavy
-low-pass blurring ($0.934$ at radius 2, $0.867$ at radius 4), so it lives in the
-\emph{coarse shape} of the steady-state heat blobs, not in seams or compression:
-the synthetic faults simply do not look like real faults.
-
-\textbf{D2 --- redundant rebalancing.} The ``no-weights'' rows of
-Table~\ref{tab:main} confirm that class weighting and data rebalancing are
-\emph{substitutes} for handling imbalance; stacking them over-corrects toward the
-majority and lowers rare recall. Even a perfect synthesiser would have to be
-deployed without fighting the class weights.
+\textbf{D2 --- rebalancing is redundant.} With class weighting off
+(Table~\ref{tab:main}, lower block), accuracy rises and rare recall falls: class
+weighting and data rebalancing are \emph{substitutes} for handling imbalance, and
+stacking them over-corrects toward the majority. Even a perfect synthesiser would
+have to be deployed without fighting the weights.
 
 \begin{figure}[h]\centering
-\includegraphics[width=0.7\linewidth]{fig_d1_auc.png}
-\caption{Synthetic-vs-real discriminator AUC (lower is more realistic). The v2
-realism upgrade made the gap \emph{worse}.}
+\includegraphics[width=0.62\linewidth]{fig_d1_auc.png}
+\caption{D1 discriminator AUC for the v1 synthesiser under increasing blur
+(lower $=$ more realistic). The gap persists under blur $\Rightarrow$ it is
+coarse, structural.}
 \label{fig:auc}
 \end{figure}
 
 \FloatBarrier
-\section{A realism upgrade that measured worse (v2)}
-A second generator (\texttt{heat\_equation\_v2}) replaced steady-state blobs with
-\emph{transient} diffusion, fixed an aspect-ratio warp, calibrated per-class
-contrast to real data, and corrected the class models (real ``Soiling'' is bright
-and streaky, not a smooth darkening). It looks markedly more realistic
-(Fig.~\ref{fig:montage}) --- yet the discriminator scored it \emph{worse}: AUC
-$1.000$ with the (na\"ively added, i.i.d.) sensor grain, and $0.934$ once the
-grain was ablated. Lessons:
-\begin{itemize}
-  \item \textbf{Visual realism is misleading;} the objective discriminator is the
-        right judge. Adding i.i.d.\ grain on top of a base that already carries
-        real, spatially-correlated noise is an obvious tell.
-  \item \textbf{The additive-blend-on-clean-base paradigm is near a detectability
-        ceiling:} corrected, v2 ($0.934$) is no better than v1 ($0.966$).
-        Incremental geometry tweaks will not close the gap.
-\end{itemize}
+\section{Closing the realism gap}
+If the gap is structural, can we close it? Three attempts, scored by an
+\emph{independent} discriminator (realism gate, target AUC $\le 0.75$);
+Fig.~\ref{fig:gate}.
+
+\textbf{(a) A better hand-built generator (v2) measured worse.} v2 replaced
+steady-state blobs with transient diffusion, fixed an aspect warp, calibrated
+contrast, and corrected the class models (real \texttt{Soiling} is bright and
+streaky, not a smooth darkening). It looks markedly more realistic
+(Fig.~\ref{fig:montage_v2}) yet scored AUC $1.000$ with na\"ively-added i.i.d.\
+grain and $0.934$ without --- visual realism was misleading, and the
+additive-blend-on-clean-base paradigm is near a detectability ceiling.
+
+\textbf{(b) A learned refiner (SimGAN) failed.} A residual refiner trained
+adversarially with a self-regularization term~\cite{shrivastava2017simgan} either
+collapsed to near-identity (patch discriminator) or added artifacts that pushed
+AUC to $0.980$ (global discriminator). The reason is principled: SimGAN refines
+\emph{appearance} assuming the structure is right, but D1 showed the gap is
+\emph{structural} --- which a self-regularized refiner cannot change.
+
+\textbf{(c) Perturbing real faults passed.} The heat equation's time-evolution
+operator is Gaussian diffusion, so we start from a \emph{real} fault crop,
+decompose it into background $+$ fault $+$ grain, and physically perturb only the
+fault (diffuse $=$ thermal time, rescale $=$ severity), keeping the real
+background and grain (Fig.~\ref{fig:montage_pert}). Structure, texture and grain
+are real by construction; AUC drops to \textbf{0.711}, clearing the gate ---
+the first generator to do so.
+
+\begin{figure}[h]\centering
+\includegraphics[width=0.66\linewidth]{fig_realism_gate.png}
+\caption{Realism gate across approaches. Only perturbing real faults closes the
+domain gap.}
+\label{fig:gate}
+\end{figure}
 
 \begin{figure}[h]\centering
 \includegraphics[width=\linewidth]{montage_v2.png}
-\caption{Real $\mid$ v1-synthetic $\mid$ v2-synthetic for the four augmented
-classes. v2 is visually closer, but measured more separable --- the cautionary
-core of this report.}
-\label{fig:montage}
+\caption{Real $\mid$ v1 $\mid$ v2 synthetic. v2 is visually closer but measured
+more separable --- a cautionary result.}
+\label{fig:montage_v2}
+\end{figure}
+
+\begin{figure}[h]\centering
+\includegraphics[width=\linewidth]{montage_perturb.png}
+\caption{A real fault (left) and physics-perturbed variants. Real background,
+frame and grain are preserved; diversity is in the physical axes (severity,
+spread, orientation).}
+\label{fig:montage_pert}
 \end{figure}
 
 \FloatBarrier
-\section{Discussion: the right role for physics}
-The error was asking physics to generate \emph{pixels}. A hand-specified PDE is
-good at \emph{structure} (where heat is, how it diffuses --- which carries the
-label) and bad at \emph{appearance} (sensor texture, noise statistics, tone
-mapping). The defensible division of labour is therefore: \textbf{physics
-proposes the fault structure; a learned model renders the appearance.} This keeps
-physics genuinely load-bearing rather than decorative, and turns the realism gap
-into a learning target instead of a hand-tuning chore.
+\section{The decisive result: realism is not utility}
+With the realism gap finally closed, does it help? No. On rare-class recall,
+\texttt{perturb} ($0.572$) is statistically identical to \texttt{oversample}
+($0.574$): paired $\Delta = -0.0015$, CI $[-0.038,+0.035]$, in both weight
+regimes, and still below \texttt{clean} ($0.612$).
 
-\section{Future work: a learned refiner (SimGAN)}
-\label{sec:future}
-We propose a SimGAN-style refiner~\cite{shrivastava2017simgan}: a small
-fully-convolutional residual network $R$ takes a physics-generated image and
-outputs a more realistic one, trained adversarially against a patch discriminator
-\emph{plus} a self-regularization term $\lambda\norm{R(x)-x}_1$ that preserves the
-physics-determined fault (hence the label). The discriminator already built for
-D1 doubles as both the adversary and --- crucially, with an \emph{independently
-trained} copy --- the scorecard.
+This is the central finding. We made augmentation \emph{realistic} and it
+\emph{still} gave no benefit over duplication --- so augmentation quality was
+never the bottleneck. The binding constraints are (i) $\sim\!150$ real images per
+rare class is too little information for any augmentation to manufacture new
+discriminative signal, and (ii) class weighting already handles the imbalance.
+For rare-fault detection on this dataset, augmentation --- synthetic or
+real-derived, crude or realistic --- is \emph{not the lever}.
 
-Validation is staged and honestly gated:
-\begin{enumerate}
-  \item \textbf{Realism gate.} Refine the synthetic set and re-score with a fresh
-        discriminator. Success: AUC falls from $0.93$ toward $\le 0.75$.
-  \item \textbf{Utility gate} (only if the first passes). Add a
-        \texttt{physics\_refined} condition to the harness and test rare-class
-        recall against \texttt{oversample}, with weights off (per D2). Success:
-        a positive paired delta whose CI excludes zero.
-\end{enumerate}
-Because the heat solver is a stack of Laplacian convolutions --- a fixed-weight
-CNN --- the entire pipeline is differentiable, enabling a later variant that
-learns the source field or PDE parameters end-to-end through the physics. The
-binding constraints remain: $\sim\!600$ real fault images is a tight data budget,
-and any generator must clear \emph{both} gates, not just the first. If the realism
-gate fails, the negative result documented here stands --- which is itself an
-acceptable, well-characterised outcome.
+\section{The lever: a long-tail loss}
+The diagnosis points at the training loss, not the data. Logit
+adjustment~\cite{menon2021logit} adds $\tau\log(\text{prior})$ to the logits
+during training and infers on raw logits, shifting the decision boundary by the
+class priors rather than reweighting gradients. The strength $\tau$ is a knob on
+the recall/accuracy frontier (Fig.~\ref{fig:tau}, Table~\ref{tab:la}).
+
+\begin{table}[h]\centering
+\begin{tabular}{lcccc}
+\toprule
+Loss & Acc. & Macro rec. & \textbf{Rare rec.} & $\Delta$ rare vs clean (CI)\\
+\midrule
+clean (weighted CE)        & 0.782 & 0.699 & 0.612 & ---\\
+logit-adj $\tau=1.0$       & \textbf{0.808} & 0.709 & 0.634 & $+0.022\ [-0.016,+0.058]$\\
+logit-adj $\tau=1.5$       & 0.763 & \textbf{0.716} & 0.696 & $\mathbf{+0.084\ [+0.038,+0.131]}$\\
+logit-adj $\tau=2.0$       & 0.683 & 0.703 & \textbf{0.728} & $\mathbf{+0.116\ [+0.071,+0.162]}$\\
+\bottomrule
+\end{tabular}
+\caption{Logit adjustment, 15-epoch schedule, 3-seed means. Rare-fault recall
+rises $0.612\!\to\!0.728$; for $\tau\ge1.5$ the gain is statistically significant
+(CI excludes zero), unlike every augmentation condition.}
+\label{tab:la}
+\end{table}
+
+\begin{figure}[h]\centering
+\includegraphics[width=0.74\linewidth]{fig_logit_adj.png}
+\caption{$\tau$ trades majority-class accuracy for rare-fault recall along a clean
+frontier. $\tau=1.5$ is a balanced default (best macro-recall of any condition,
+$0.716$); $\tau=2.0$ maximises detection.}
+\label{fig:tau}
+\end{figure}
+
+This is the first \emph{statistically significant} improvement on the objective
+metric in the whole study. For a fault-detection task, where a missed fault costs
+more than a false alarm, the trade is favourable: $\tau=1.5$ raises rare recall to
+$0.696$ at a small accuracy cost ($0.763$ vs $0.782$), and $\tau=2.0$ to $0.728$
+if false alarms are acceptable.
+
+\FloatBarrier
+\section{Discussion and recommendations}
+\begin{itemize}
+  \item \textbf{The right role for physics is structure, not pixels.} Hand-built
+        PDE generators failed because they were asked to render appearance, which
+        is hard to specify; perturbing real faults succeeded at realism because it
+        kept real appearance and used physics only for the fault's transformation.
+  \item \textbf{But here, even that was not enough} --- the limiting factor was
+        information content and the loss, not generation. This is specific to the
+        regime (scarce rare classes; effective class weighting), not a universal
+        claim about augmentation.
+  \item \textbf{Recommendation.} Adopt logit adjustment ($\tau\approx1.5$) as the
+        default loss, replacing inverse-frequency weighting; expose $\tau$ as the
+        recall/precision operating-point control. Further headroom:
+        LDAM with deferred reweighting~\cite{cao2019ldam}, focal
+        loss~\cite{lin2017focal} (with care --- it can over-focus on the
+        ambiguous \texttt{Soiling} class), on-domain self-supervised pretraining,
+        and collecting more real rare-fault labels.
+  \item \textbf{Methodological takeaway.} The honest-baseline plus
+        bootstrap-CI harness turned a fragile $+9.8$ headline into a bounded
+        negative result \emph{and} pointed to the real lever. A well-characterised
+        negative result, with the limiting factor identified, was more valuable
+        than the inflated positive it replaced.
+\end{itemize}
 
 \printbibliography
 \end{document}
