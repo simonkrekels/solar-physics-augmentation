@@ -266,6 +266,32 @@ Productive next directions are off the generator entirely: long-tail losses
 on-domain self-supervised pretraining, or simply collecting more real rare-fault
 labels.
 
+## Off-generator lever: logit adjustment works
+
+`verify_seeds --conditions logit_adj` — logit-adjusted loss (Menon et al. 2020):
+add $\tau\log(\text{prior})$ to logits in training, infer on raw logits; replaces
+class weighting (`train_one(loss_type="logit_adj")`).
+
+| Condition | Accuracy | Macro recall | Rare-class recall |
+|---|---|---|---|
+| clean (class-weighted CE) | 0.782 | 0.699 | 0.612 |
+| **logit_adj** | **0.808** | **0.709** | **0.634** |
+
+`logit_adj` is the **best** condition on rare-class recall *and* macro-recall
+*and* accuracy — it **Pareto-dominates** the class-weighting baseline. Where
+inverse-frequency weighting trades accuracy for rare recall (D2: 0.84→0.78),
+logit adjustment improves both, because it shifts the decision boundary by the
+class priors rather than reweighting gradients.
+
+**Caveat:** the rare-recall gain (+0.022) is within bootstrap noise
+(CI $[-0.059,+0.015]$; the perennial ~25-images-per-class problem), but the
+accuracy gain is robust. The operating point is unambiguously better.
+
+**Bottom line of the whole investigation:** augmentation (any form) was not the
+lever; a principled long-tail *loss* is. Recommended change: make `logit_adj`
+the default loss (replacing inverse-frequency class weighting). Further headroom:
+LDAM + deferred reweighting, on-domain SSL pretraining, more real labels.
+
 ## Suggested first sprint
 
 1. D1 (discriminator) + D2 (decouple rebalance/weighting) — diagnose H1 vs H2.

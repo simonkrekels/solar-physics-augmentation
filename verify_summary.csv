@@ -26,3 +26,6 @@ seed,condition,test_acc,macro_f1,macro_recall,train_min
 1,perturb_nw,0.832,0.6941,0.6953,62.9
 2,perturb,0.804,0.6672,0.6802,62.9
 2,perturb_nw,0.8147,0.6606,0.6553,62.9
+42,logit_adj,0.8107,0.6727,0.7099,56.7
+1,logit_adj,0.8003,0.6621,0.7014,57.7
+2,logit_adj,0.813,0.6672,0.7157,57.7

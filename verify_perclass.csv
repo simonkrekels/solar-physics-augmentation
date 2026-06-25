@@ -4,6 +4,7 @@ Cell,False,oversample,0.7153,0.6693,0.7585
 Cell,False,randaugment,0.6797,0.6315,0.7256
 Cell,False,physics,0.7165,0.6728,0.7614
 Cell,False,perturb,0.7129,0.6667,0.756
+Cell,False,logit_adj,0.669,0.6192,0.7141
 Cell,False,clean_nw,0.7117,0.6667,0.7543
 Cell,False,oversample_nw,0.675,0.6284,0.7205
 Cell,False,physics_nw,0.707,0.6607,0.754
@@ -13,6 +14,7 @@ Cell-Multi,False,oversample,0.5043,0.442,0.5682
 Cell-Multi,False,randaugment,0.4801,0.4193,0.5417
 Cell-Multi,False,physics,0.4991,0.437,0.5668
 Cell-Multi,False,perturb,0.4974,0.4359,0.5611
+Cell-Multi,False,logit_adj,0.5216,0.4591,0.5863
 Cell-Multi,False,clean_nw,0.475,0.4152,0.5391
 Cell-Multi,False,oversample_nw,0.4473,0.3886,0.5079
 Cell-Multi,False,physics_nw,0.4715,0.4104,0.5365
@@ -22,6 +24,7 @@ Cracking,False,oversample,0.74,0.6795,0.8005
 Cracking,False,randaugment,0.7423,0.6764,0.8044
 Cracking,False,physics,0.7612,0.7006,0.8165
 Cracking,False,perturb,0.7376,0.6718,0.802
+Cracking,False,logit_adj,0.7258,0.6619,0.787
 Cracking,False,clean_nw,0.74,0.6773,0.8025
 Cracking,False,oversample_nw,0.7565,0.6932,0.819
 Cracking,False,physics_nw,0.7329,0.6667,0.7938
@@ -31,6 +34,7 @@ Diode,False,oversample,0.9733,0.9533,0.9904
 Diode,False,randaugment,0.9733,0.9511,0.9904
 Diode,False,physics,0.957,0.9339,0.9767
 Diode,False,perturb,0.9674,0.9452,0.9848
+Diode,False,logit_adj,0.9644,0.9398,0.9844
 Diode,False,clean_nw,0.9748,0.9528,0.9921
 Diode,False,oversample_nw,0.9393,0.9109,0.963
 Diode,False,physics_nw,0.96,0.9357,0.9793
@@ -40,6 +44,7 @@ Diode-Multi,True,oversample,0.9231,0.8205,0.9872
 Diode-Multi,True,randaugment,0.9872,0.9524,1.0
 Diode-Multi,True,physics,0.9231,0.8333,1.0
 Diode-Multi,True,perturb,0.9103,0.8039,0.9877
+Diode-Multi,True,logit_adj,0.9744,0.9048,1.0
 Diode-Multi,True,clean_nw,0.9359,0.8333,1.0
 Diode-Multi,True,oversample_nw,0.9487,0.85,1.0
 Diode-Multi,True,physics_nw,0.9231,0.8235,0.9889
@@ -49,6 +54,7 @@ Hot-Spot,True,oversample,0.5495,0.4,0.6945
 Hot-Spot,True,randaugment,0.5856,0.4414,0.7312
 Hot-Spot,True,physics,0.5225,0.3718,0.6752
 Hot-Spot,True,perturb,0.5766,0.439,0.7157
+Hot-Spot,True,logit_adj,0.5586,0.4054,0.7037
 Hot-Spot,True,clean_nw,0.4865,0.3429,0.6333
 Hot-Spot,True,oversample_nw,0.5586,0.4144,0.7009
 Hot-Spot,True,physics_nw,0.5315,0.3833,0.6765
@@ -58,6 +64,7 @@ Hot-Spot-Multi,True,oversample,0.5315,0.3823,0.6754
 Hot-Spot-Multi,True,randaugment,0.4685,0.3333,0.6095
 Hot-Spot-Multi,True,physics,0.4775,0.3421,0.6111
 Hot-Spot-Multi,True,perturb,0.4685,0.3238,0.6032
+Hot-Spot-Multi,True,logit_adj,0.6036,0.4775,0.7262
 Hot-Spot-Multi,True,clean_nw,0.5495,0.4206,0.6782
 Hot-Spot-Multi,True,oversample_nw,0.4865,0.3566,0.6061
 Hot-Spot-Multi,True,physics_nw,0.5045,0.3703,0.6354
@@ -67,6 +74,7 @@ No-Anomaly,False,oversample,0.8896,0.8765,0.902
 No-Anomaly,False,randaugment,0.8436,0.8277,0.8582
 No-Anomaly,False,physics,0.878,0.8648,0.8904
 No-Anomaly,False,perturb,0.8893,0.8766,0.9016
+No-Anomaly,False,logit_adj,0.902,0.8902,0.914
 No-Anomaly,False,clean_nw,0.9707,0.9634,0.9771
 No-Anomaly,False,oversample_nw,0.9613,0.9541,0.9683
 No-Anomaly,False,physics_nw,0.9689,0.9619,0.9754
@@ -76,6 +84,7 @@ Offline-Module,False,oversample,0.7312,0.66,0.7995
 Offline-Module,False,randaugment,0.6882,0.6167,0.7571
 Offline-Module,False,physics,0.7016,0.625,0.7759
 Offline-Module,False,perturb,0.7231,0.6499,0.7911
+Offline-Module,False,logit_adj,0.7151,0.6384,0.7855
 Offline-Module,False,clean_nw,0.6371,0.5574,0.712
 Offline-Module,False,oversample_nw,0.5941,0.5068,0.6752
 Offline-Module,False,physics_nw,0.6452,0.5637,0.7212
@@ -85,6 +94,7 @@ Shadowing,False,oversample,0.8218,0.7646,0.8718
 Shadowing,False,randaugment,0.8239,0.7718,0.8722
 Shadowing,False,physics,0.8029,0.7462,0.8568
 Shadowing,False,perturb,0.8134,0.7597,0.8641
+Shadowing,False,logit_adj,0.7966,0.7405,0.8487
 Shadowing,False,clean_nw,0.7484,0.6882,0.8073
 Shadowing,False,oversample_nw,0.7317,0.6706,0.7885
 Shadowing,False,physics_nw,0.74,0.6797,0.8005
@@ -94,6 +104,7 @@ Soiling,True,oversample,0.2903,0.1481,0.4394
 Soiling,True,randaugment,0.4194,0.2499,0.5914
 Soiling,True,physics,0.3548,0.2121,0.5054
 Soiling,True,perturb,0.3333,0.1935,0.4706
+Soiling,True,logit_adj,0.3978,0.2473,0.5447
 Soiling,True,clean_nw,0.2688,0.125,0.425
 Soiling,True,oversample_nw,0.3333,0.1954,0.4762
 Soiling,True,physics_nw,0.3118,0.1728,0.4598
@@ -103,6 +114,7 @@ Vegetation,False,oversample,0.6951,0.647,0.7433
 Vegetation,False,randaugment,0.7276,0.681,0.7731
 Vegetation,False,physics,0.7209,0.6736,0.7686
 Vegetation,False,perturb,0.71,0.6608,0.7604
+Vegetation,False,logit_adj,0.6789,0.6337,0.7262
 Vegetation,False,clean_nw,0.7141,0.6667,0.7589
 Vegetation,False,oversample_nw,0.7236,0.6761,0.77
 Vegetation,False,physics_nw,0.7317,0.6837,0.7768
